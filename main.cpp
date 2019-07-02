@@ -17,8 +17,15 @@
 // 計算に用いるシェーダ
 #include "Calculate.h"
 
+// 主成分分析を行うためのシェーダ
+#include "ComputeShader.h"
+
 // 頂点位置の生成をシェーダ (position.frag) で行うなら 1
 #define GENERATE_POSITION 0
+
+// 主成分分析を行うなら 1
+#define PCA_OPTION 0
+
 
 //
 // メインプログラム
@@ -75,6 +82,12 @@ int main()
 
   // 頂点位置から法線ベクトルを計算するシェーダ
   const Calculate normal(width, height, "normal.frag");
+
+
+#if PCA_OPTION
+  // デプスカメラで対象平面を主成分分析(principal component analysis)
+  ComputeShader pca(width, height, "pca.comp");
+#endif
 
   // 背景色を設定する
   glClearColor(background[0], background[1], background[2], background[3]);
