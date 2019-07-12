@@ -21,11 +21,17 @@
 #include "ComputeShader.h"
 
 // 頂点位置の生成をシェーダ (position.frag) で行うなら 1
-#define GENERATE_POSITION 0
+#define GENERATE_POSITION 1
 
-// 主成分分析を行うなら 1
+// 主成分分析(Principal Component Analysis)で平面を出すなら 1　＊未実装
 #define PCA_OPTION 0
 
+// 最小二乗法(Least Squares Method)で平面を出すなら 1
+#define LSM_OPTION 1
+
+// デプスセンサーのデータ範囲の指定
+#define NEAR_RENGE 100
+#define FAR_RENGE 4000
 
 //
 // メインプログラム
@@ -85,8 +91,21 @@ int main()
 
 
 #if PCA_OPTION
-  // デプスカメラで対象平面を主成分分析(principal component analysis)
+  // デプスカメラで対象平面を主成分分析
   ComputeShader pca(width, height, "pca.comp");
+#endif
+
+#if LSM_OPTION
+  // デプスカメラで対象平面を最小二乗法で計算
+  ComputeShader lsm(width, height, "lsm.comp");
+  // LU分解のSUM用変数群、
+  float s_x2(0.0);
+  float s_y2(0.0);
+  float s_xy(0.0);
+  float s_yz(0.0);
+  float s_xz(0.0);
+  GLint XY2Loc = glGetUniformLocation(lsm.setprogram(), "s_XY2");
+  GLint XYZLoc = glGetUniformLocation(lsm.setprogram(), "s_XYZ");
 #endif
 
   // 背景色を設定する
@@ -100,6 +119,29 @@ int main()
   while (!window.shouldClose())
   {
 #if GENERATE_POSITION
+	  //pcaで平面推定　＊未作成
+#if PCA_OPTION 
+	  pca.use();
+#endif
+
+#if LSM_OPTION
+	  lsm.use();
+	  // 計算用変数の送信
+	  // x2,y2を入れる用
+	  glUniform2f(XY2Loc, s_x2, s_y2);
+	  // xy, yz, xzを入れる用
+	  glUniform3f(XYZLoc, s_xy, s_yz, s_xz);
+
+	  // depthデータの送信
+	  glUniform1i(0, 0);
+	  glActiveTexture(GL_TEXTURE0);
+	  sensor.getDepth();
+
+	  // 処理結果の保存
+	  glBindImageTexture(1, lsm.tex_A, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+#endif
+
     // 頂点位置の計算
     position.use();
     glUniform1i(0, 0);

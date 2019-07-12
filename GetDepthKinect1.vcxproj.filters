@@ -103,5 +103,8 @@
     <None Include="pca.comp">
       <Filter>シェーダー ファイル</Filter>
     </None>
+    <None Include="lsm.comp">
+      <Filter>シェーダー ファイル</Filter>
+    </None>
   </ItemGroup>
 </Project>

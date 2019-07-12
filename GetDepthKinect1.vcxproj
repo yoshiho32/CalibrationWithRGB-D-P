@@ -173,6 +173,7 @@
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="lsm.comp" />
     <None Include="normal.frag" />
     <None Include="pca.comp" />
     <None Include="position.frag" />
