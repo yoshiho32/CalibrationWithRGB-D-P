@@ -97,15 +97,9 @@ int main()
 
 #if LSM_OPTION
   // デプスカメラで対象平面を最小二乗法で計算
+  ComputeShader calc_xyz(width, height, "calc_xyz.comp");
   ComputeShader lsm(width, height, "lsm.comp");
-  // LU分解のSUM用変数群、
-  float s_x2(0.0);
-  float s_y2(0.0);
-  float s_xy(0.0);
-  float s_yz(0.0);
-  float s_xz(0.0);
-  GLint XY2Loc = glGetUniformLocation(lsm.setprogram(), "s_XY2");
-  GLint XYZLoc = glGetUniformLocation(lsm.setprogram(), "s_XYZ");
+
 #endif
 
   // 背景色を設定する
@@ -125,20 +119,37 @@ int main()
 #endif
 
 #if LSM_OPTION
-	  lsm.use();
-	  // 計算用変数の送信
-	  // x2,y2を入れる用
-	  glUniform2f(XY2Loc, s_x2, s_y2);
-	  // xy, yz, xzを入れる用
-	  glUniform3f(XYZLoc, s_xy, s_yz, s_xz);
-
+	  calc_xyz.use();
 	  // depthデータの送信
 	  glUniform1i(0, 0);
 	  glActiveTexture(GL_TEXTURE0);
 	  sensor.getDepth();
 
 	  // 処理結果の保存
-	  glBindImageTexture(1, lsm.tex_A, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  // x^2 と　y^2 の保存
+	  glActiveTexture(GL_TEXTURE1);
+	  glBindImageTexture(1, calc_xyz.tex_A, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+	  // xy yz xz の保存
+	  glActiveTexture(GL_TEXTURE2);
+	  glBindImageTexture(2, calc_xyz.tex_B, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+	  calc_xyz.calculate();
+
+	  lsm.use();
+	  
+	  glActiveTexture(GL_TEXTURE0);
+	  glBindImageTexture(1, calc_xyz.tex_C, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE1);
+	  glBindImageTexture(1, calc_xyz.tex_A, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+	  // xy yz xz の保存
+	  glActiveTexture(GL_TEXTURE2);
+	  glBindImageTexture(2, calc_xyz.tex_B, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+
+
+	  //計算したxyz
 
 #endif
 
