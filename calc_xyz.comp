@@ -31,5 +31,4 @@ void main(){
 	// Œ‹‰Ê‚Ìo—Í
 	imageStore(xy2_out, texcoord, vec4(s_xy2, 0, 0));
 	imageStore(xyz_out, texcoord, s_xyz);
-
 }

@@ -53,10 +53,10 @@ ComputeShader::~ComputeShader() {
 // 計算を実行する
 const std::vector<GLuint> &ComputeShader::calculate() const
 {
-
+	// 処理の実行
 	glDispatchCompute(width, height, 1);
-	//画素の書き込みが終わるまで待つ
 
+	//画素の書き込みが終わるまで待つ
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	//std::cout << tex_output << std::endl;
 	return texture;

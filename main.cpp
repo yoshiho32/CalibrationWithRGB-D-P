@@ -139,17 +139,13 @@ int main()
 	  lsm.use();
 	  
 	  glActiveTexture(GL_TEXTURE0);
-	  glBindImageTexture(1, calc_xyz.tex_C, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(0, calc_xyz.tex_C, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 	  glActiveTexture(GL_TEXTURE1);
 	  glBindImageTexture(1, calc_xyz.tex_A, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
-	  // xy yz xz ‚Ì•Û‘¶
 	  glActiveTexture(GL_TEXTURE2);
 	  glBindImageTexture(2, calc_xyz.tex_B, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-
-
-	  //ŒvŽZ‚µ‚½xyz
 
 #endif
 
