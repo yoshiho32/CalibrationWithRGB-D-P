@@ -147,6 +147,8 @@ int main()
 	  glActiveTexture(GL_TEXTURE2);
 	  glBindImageTexture(2, calc_xyz.tex_B, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
+	  lsm.use();
+
 #endif
 
     // ’¸“_ˆÊ’u‚ÌŒvŽZ

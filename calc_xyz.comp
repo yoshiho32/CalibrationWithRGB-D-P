@@ -23,10 +23,10 @@ void main(){
 	ivec2 texcoord = ivec2(gl_GlobalInvocationID.xy);
 
 	//現在のデプス// stepして有効かどうかを出す
-	vec4 p = vec4(texture(depth, texcoord).xyz, 1) * step(threshold, texture(depth,texcoord).z);
+	vec4 p = vec4(texture(depth, texcoord).xyz, step(threshold, texture(depth,texcoord).z));
 
-	vec2 s_xy2 =  vec2(p.x*p.x, p.y*p.y) * p.w;
-	vec4 s_xyz = vec4(vec3(p.x*p.y, p.y*p.z, p.x*p.z) * p.w, 1.0);
+	vec2 s_xy2 = vec2(p.x*p.x, p.y*p.y) * p.w;
+	vec4 s_xyz = vec4(vec3(p.x*p.y, p.y*p.z, p.x*p.z) * p.w, p.w);
 
 	// 結果の出力
 	imageStore(xy2_out, texcoord, vec4(s_xy2, 0, 0));

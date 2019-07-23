@@ -31,7 +31,8 @@ layout (location = 1) in vec2 cc;                   // カラーのテクスチャ座標
 // ラスタライザに送る頂点属性
 out vec4 idiff;                                     // 拡散反射光強度
 out vec4 ispec;                                     // 鏡面反射光強度
-out vec2 texcoord;                                  // テクスチャ座標
+out vec2 texcoord;        
+// テクスチャ座標
 
 void main(void)
 {
