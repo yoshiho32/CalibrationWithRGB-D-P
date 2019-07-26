@@ -5,16 +5,23 @@
 #define DEPTH_MAXIMUM (-10.0)
 
 // コンピュートシェーダー上のカーネルサイズ
-layout(local_size_x = 16, local_size_y = 16) in;
+layout(local_size_x = 2, local_size_y = 2) in;
 
-// 計算結果の
+// 元データの入力
 layout (rgba32f, binding = 0) uniform restrict image2D xyz_in;
 layout (rgba32f, binding = 1) uniform restrict image2D xy2_in;
 layout (rgba32f, binding = 2) uniform restrict image2D xyzx_in;
 
-layout (rgba32f, binding = 3) uniform restrict image2D xyz_out;
-layout (rgba32f, binding = 4) uniform restrict image2D xy2_out;
-layout (rgba32f, binding = 5) uniform restrict image2D xyzx_out;
+// 計算結果の出力
+uniform float sum_x;
+uniform float sum_y;
+uniform float sum_z;
+uniform float sum_x2;
+uniform float sum_y2;
+uniform float sum_xy;
+uniform float sum_yz;
+uniform float sum_xz;
+uniform float sum_w;
 
 // LSMの処理用 深度の範囲 (取ってやる必要があるかも？現状は決め打ち
 //vec2 range = vec2(100, 7000);
@@ -23,8 +30,6 @@ const float threshold = 300 * MILLIMETER;
 void main(){
 	//gl_GlobalInvocationIDでカーネル的に現在地が取れる
 	ivec2 texcoord = ivec2(gl_GlobalInvocationID.xy);
-
-	// inで入ってきた値を足し合わせてoutに入れる
 
 	//tex_outputのtexcoordの位置にpoを入れる
 	//imageStore(tex_output, texcoord, po);

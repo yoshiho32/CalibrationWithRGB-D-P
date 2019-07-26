@@ -31,18 +31,11 @@ class ComputeShader : public gg2 {
 
 public:
 
-
-	//コンピュートシェーダーの計算結果が入るtexture
-	GLuint tex_A;
-	GLuint tex_B;
-	GLuint tex_C;
-
 	//インストラクタ
 	ComputeShader(int width, int height, const char *source, int uniforms = 1, int targets = 1);
 
 	// デストラクタ
 	virtual ~ComputeShader();
-
 
 	// 計算用のシェーダプログラムの使用を開始する
 	void use() const
@@ -59,3 +52,4 @@ public:
 	}
 
 };
+

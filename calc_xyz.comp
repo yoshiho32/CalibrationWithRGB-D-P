@@ -11,24 +11,26 @@ layout(local_size_x = 1, local_size_y = 1) in;
 layout (location = 0) uniform sampler2D depth;
 
 // 計算したデータを入れる
-layout (rgba32f, binding = 1) uniform writeonly image2D xy2_out;
-layout (rgba32f, binding = 2) uniform writeonly image2D xyz_out;
+layout (rgba32f, binding = 1) uniform writeonly image2D xyz_out;
+layout (rgba32f, binding = 2) uniform writeonly image2D xy2_out;
+layout (rgba32f, binding = 3) uniform writeonly image2D xyzx_out;
 
 // LSMの処理用 深度の範囲 (取ってやる必要があるかも？現状は決め打ち / なんかうまくいかないのでstepにしてる
 //vec2 range = vec2(100, 7000);
 const float threshold = 300 * MILLIMETER;
 
 void main(){
-	//gl_GlobalInvocationIDでカーネル的に現在地が取れる
+	// gl_GlobalInvocationIDでカーネル的に現在地が取れる
 	ivec2 texcoord = ivec2(gl_GlobalInvocationID.xy);
 
-	//現在のデプス// stepして有効かどうかを出す
+	// 現在のデプス// stepして有効かどうかを出す
 	vec4 p = vec4(texture(depth, texcoord).xyz, step(threshold, texture(depth,texcoord).z));
 
 	vec2 s_xy2 = vec2(p.x*p.x, p.y*p.y) * p.w;
 	vec4 s_xyz = vec4(vec3(p.x*p.y, p.y*p.z, p.x*p.z) * p.w, p.w);
 
 	// 結果の出力
+	imageStore(xyz_out, texcoord, p);
 	imageStore(xy2_out, texcoord, vec4(s_xy2, 0, 0));
-	imageStore(xyz_out, texcoord, s_xyz);
+	imageStore(xyzx_out, texcoord, s_xyz);
 }

@@ -33,6 +33,34 @@
 #define NEAR_RENGE 100
 #define FAR_RENGE 4000
 
+// テクスチャを作成する
+// CLAMP_MODEでテクスチャの端を指定
+// 0 : GL_CLAMP_TO_EDGE  （折り返す
+// 1 : GL_CLAMP_TO_BORDER (borderで塗る（真っ黒）
+void makeTex(GLuint p, int width, int height, int CLAMP_MODE = 0) {
+
+	// テクスチャの作成
+	//glGenTextures(1, &p);
+	glBindTexture(GL_TEXTURE_2D, p);
+
+	// LAP_MODEの値によって挙動を変える
+	if (CLAMP_MODE == 0) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
+
+	if (CLAMP_MODE == 1) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		static const GLfloat border[] = { 0.0, 0.0, 0.0, 0.0 };
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
+	}
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+}
+
 //
 // メインプログラム
 //
@@ -77,6 +105,11 @@ int main()
   int width, height;
   sensor.getDepthResolution(&width, &height);
 
+  // 深度センサの解像度の最大値
+  int MAX_WH = width>=height ? width : height;
+
+
+
   // 描画に使うメッシュ
   const Mesh mesh(width, height, sensor.getCoordBuffer());
 
@@ -99,6 +132,21 @@ int main()
   // デプスカメラで対象平面を最小二乗法で計算
   ComputeShader calc_xyz(width, height, "calc_xyz.comp");
   ComputeShader lsm(width, height, "lsm.comp");
+  ComputeShader lsm_output(width, height, "lsm_output.comp");
+  
+  //計算用のテクスチャ
+  GLuint xyz_tex1;
+  glGenTextures(1, &xyz_tex1);
+  GLuint xyz_tex2;
+  glGenTextures(1, &xyz_tex2);
+  GLuint xy2_tex1;
+  glGenTextures(1, &xy2_tex1);
+  GLuint xy2_tex2;
+  glGenTextures(1, &xy2_tex2);
+  GLuint xyzx_tex1;
+  glGenTextures(1, &xyzx_tex1);
+  GLuint xyzx_tex2;
+  glGenTextures(1, &xyzx_tex2);
 
 #endif
 
@@ -119,6 +167,8 @@ int main()
 #endif
 
 #if LSM_OPTION
+
+	  /* 処理１：デプスデータからx,y,z,x^2,y^2,xy,yz,xz,w(データの有効性)を取得 */
 	  calc_xyz.use();
 	  // depthデータの送信
 	  glUniform1i(0, 0);
@@ -126,29 +176,73 @@ int main()
 	  sensor.getDepth();
 
 	  // 処理結果の保存
-	  // x^2 と　y^2 の保存
+	  // x, y, z, w の保存
+	  makeTex(xyz_tex1, MAX_WH, MAX_WH, 1);
 	  glActiveTexture(GL_TEXTURE1);
-	  glBindImageTexture(1, calc_xyz.tex_A, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-
-	  // xy yz xz の保存
+	  glBindImageTexture(1, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  // x^2, y^2 の保存
+	  makeTex(xy2_tex1, MAX_WH, MAX_WH, 1);
 	  glActiveTexture(GL_TEXTURE2);
-	  glBindImageTexture(2, calc_xyz.tex_B, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(2, xy2_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  // xy, yz, xz  の保存
+	  makeTex(xyzx_tex1, MAX_WH, MAX_WH, 1);
+	  glActiveTexture(GL_TEXTURE3);
+	  glBindImageTexture(3, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
+	  // 計算実行
 	  calc_xyz.calculate();
 
+	  /* 処理2：データをすべて加算する */
 	  lsm.use();
 	  
+	  // 保存したデータの受け渡し
 	  glActiveTexture(GL_TEXTURE0);
-	  glBindImageTexture(0, calc_xyz.tex_C, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-
+	  glBindImageTexture(0, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE1);
-	  glBindImageTexture(1, calc_xyz.tex_A, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-
+	  glBindImageTexture(1, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE2);
-	  glBindImageTexture(2, calc_xyz.tex_B, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(2, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
+	  // 計算データの保存先
+	  MAX_WH /= 16;
+	  makeTex(xyz_tex2, MAX_WH, MAX_WH, 1);
+	  makeTex(xy2_tex2, MAX_WH, MAX_WH, 1);
+	  makeTex(xyzx_tex2, MAX_WH, MAX_WH, 1);
+	  glActiveTexture(GL_TEXTURE3);
+	  glBindImageTexture(3, xyz_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE4);
+	  glBindImageTexture(4, xy2_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE5);
+	  glBindImageTexture(5, xyzx_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  // 計算の実行
+	  lsm.calculate();//512*512→32*32のテクスチャに
+	  
 	  lsm.use();
+	  // 保存したデータの受け渡し
+	  glActiveTexture(GL_TEXTURE0);
+	  glBindImageTexture(0, xyz_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE1);
+	  glBindImageTexture(1, xyz_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE2);
+	  glBindImageTexture(2, xyzx_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
+	  // 計算データの保存先
+	  MAX_WH /= 16;
+	  makeTex(xyz_tex2, MAX_WH, MAX_WH, 1);
+	  makeTex(xy2_tex2, MAX_WH, MAX_WH, 1);
+	  makeTex(xyzx_tex2, MAX_WH, MAX_WH, 1);
+	  glActiveTexture(GL_TEXTURE3);
+	  glBindImageTexture(3, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE4);
+	  glBindImageTexture(4, xy2_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE5);
+	  glBindImageTexture(5, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  // 計算の実行
+	  lsm.calculate();//32*32→2*2のテクスチャに
+
+	  lsm_output.use();
+	  lsm_output.calculate();
+	  
 #endif
 
     // 頂点位置の計算
