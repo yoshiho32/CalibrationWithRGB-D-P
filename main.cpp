@@ -199,7 +199,7 @@ int main()
 	  glActiveTexture(GL_TEXTURE0);
 	  glBindImageTexture(0, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE1);
-	  glBindImageTexture(1, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(1, xy2_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE2);
 	  glBindImageTexture(2, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
@@ -222,15 +222,15 @@ int main()
 	  glActiveTexture(GL_TEXTURE0);
 	  glBindImageTexture(0, xyz_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE1);
-	  glBindImageTexture(1, xyz_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(1, xy2_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE2);
 	  glBindImageTexture(2, xyzx_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 	  // 計算データの保存先
 	  MAX_WH /= 16;
-	  makeTex(xyz_tex2, MAX_WH, MAX_WH, 1);
-	  makeTex(xy2_tex2, MAX_WH, MAX_WH, 1);
-	  makeTex(xyzx_tex2, MAX_WH, MAX_WH, 1);
+	  makeTex(xyz_tex1, MAX_WH, MAX_WH, 1);
+	  makeTex(xy2_tex1, MAX_WH, MAX_WH, 1);
+	  makeTex(xyzx_tex1, MAX_WH, MAX_WH, 1);
 	  glActiveTexture(GL_TEXTURE3);
 	  glBindImageTexture(3, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE4);
@@ -241,6 +241,15 @@ int main()
 	  lsm.calculate();//32*32→2*2のテクスチャに
 
 	  lsm_output.use();
+	  glActiveTexture(GL_TEXTURE0);
+	  glBindImageTexture(0, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE1);
+	  glBindImageTexture(1, xy2_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glActiveTexture(GL_TEXTURE2);
+	  glBindImageTexture(2, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  // 計算結果の出力先
+
+
 	  lsm_output.calculate();
 	  
 #endif

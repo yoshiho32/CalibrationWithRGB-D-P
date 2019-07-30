@@ -175,6 +175,7 @@
   <ItemGroup>
     <None Include="calc_xyz.comp" />
     <None Include="lsm.comp" />
+    <None Include="lsm_output.comp" />
     <None Include="normal.frag" />
     <None Include="pca.comp" />
     <None Include="position.frag" />

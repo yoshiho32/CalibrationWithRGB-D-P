@@ -1,8 +1,8 @@
 #version 430 core
 
-#define MILLIMETER 0.001
-#define DEPTH_SCALE (-65535.0 * MILLIMETER)
-#define DEPTH_MAXIMUM (-10.0)
+shared vec4 pixel_xyz[16][16];
+shared vec4 pixel_xy2[16][16];
+shared vec4 pixel_xyzx[16][16];
 
 // コンピュートシェーダー上のカーネルサイズ
 layout(local_size_x = 16, local_size_y = 16) in;
@@ -16,17 +16,40 @@ layout (rgba32f, binding = 3) uniform restrict image2D xyz_out;
 layout (rgba32f, binding = 4) uniform restrict image2D xy2_out;
 layout (rgba32f, binding = 5) uniform restrict image2D xyzx_out;
 
-// LSMの処理用 深度の範囲 (取ってやる必要があるかも？現状は決め打ち
-//vec2 range = vec2(100, 7000);
-const float threshold = 300 * MILLIMETER;
-
 void main(){
-	//gl_GlobalInvocationIDでカーネル的に現在地が取れる
-	ivec2 texcoord = ivec2(gl_GlobalInvocationID.xy);
+	// テクスチャの現在地(0,0)-(512,512)
+	ivec2 texcoord    = ivec2(gl_GlobalInvocationID.xy);
+	// ワークグループ内での現在地(0,0)-(16,16)
+	ivec2 local_coord = ivec2(gl_LocalInvocationID.xy);
+	// ワークグループの位置(0,0)-(32,32)or(2,2)
+	ivec2 groupid     = ivec2(gl_WorkGroupID.xy);
+	
+	// ワークグループ内でデータを並列に読み込ませる
+	pixel_xyz[local_coord.y][local_coord.x] =  imageLoad(xyz_in, texcoord);
+	pixel_xy2[local_coord.y][local_coord.x] =  imageLoad(xy2_in, texcoord);
+	pixel_xyzx[local_coord.y][local_coord.x] = imageLoad(xyzx_in, texcoord);
 
-	// inで入ってきた値を足し合わせてoutに入れる
+	// ワークグループ内で処理が終わるのを待つ
+	barrier();
+	memoryBarrierShared();
 
-	//tex_outputのtexcoordの位置にpoを入れる
-	//imageStore(tex_output, texcoord, po);
+	// 足し合わせる用
+	vec4 s_xyz = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 s_xy2 = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 s_xyzx = vec4(0.0, 0.0, 0.0, 0.0);
+
+	// ワークグループ内の値を順番に足し合わせていく
+	for(int i = 0; i < 16; i++){
+	  for(int j = 0; j < 16; j++){
+	    s_xyz  += pixel_xyz[i][j];
+		s_xy2  += pixel_xy2[i][j];
+		s_xyzx += pixel_xyzx[i][j];
+	  }
+	}
+
+	//workgroupの合算値としてidの場所に値を格納する
+	imageStore(xyz_out,  groupid, s_xyz);
+	imageStore(xy2_out,  groupid, s_xy2);
+	imageStore(xyzx_out, groupid, s_xyzx);
 
 }

@@ -109,5 +109,8 @@
     <None Include="calc_xyz.comp">
       <Filter>シェーダー ファイル</Filter>
     </None>
+    <None Include="lsm_output.comp">
+      <Filter>シェーダー ファイル</Filter>
+    </None>
   </ItemGroup>
 </Project>
