@@ -44,7 +44,7 @@ public:
 	}
 
 	// ŒvZ‚ğÀs‚·‚é
-	const std::vector<GLuint> &calculate() const;
+	const std::vector<GLuint> &calculate(int karnel_w, int karnel_h) const;
 
 	//program‚ğŒÄ‚Ño‚·
 	GLuint setprogram() {

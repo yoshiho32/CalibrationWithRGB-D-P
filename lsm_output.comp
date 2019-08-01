@@ -4,31 +4,64 @@
 #define DEPTH_SCALE (-65535.0 * MILLIMETER)
 #define DEPTH_MAXIMUM (-10.0)
 
+// シェアメモリ
+shared vec4 pixel_xyz[2][2];
+shared vec4 pixel_xy2[2][2];
+shared vec4 pixel_xyzx[2][2];
+
 // コンピュートシェーダー上のカーネルサイズ
-layout(local_size_x = 1, local_size_y = 1) in;
+layout(local_size_x = 2, local_size_y = 2) in;
 
 // 元データの入力
 layout (rgba32f, binding = 0) uniform restrict image2D xyz_in;
 layout (rgba32f, binding = 1) uniform restrict image2D xy2_in;
 layout (rgba32f, binding = 2) uniform restrict image2D xyzx_in;
 
+
 // 計算結果の出力
-uniform float sum_x;
-uniform float sum_y;
-uniform float sum_z;
-uniform float sum_x2;
-uniform float sum_y2;
-uniform float sum_xy;
-uniform float sum_yz;
-uniform float sum_xz;
-uniform float sum_w;
+layout (std430, binding = 3) buffer data{
+  float Data[];
+};
 
 void main(){
-	//gl_GlobalInvocationIDでカーネル的に現在地が取れる
-	ivec2 texcoord = ivec2(gl_GlobalInvocationID.xy);
+	// テクスチャの現在地(0,0)-(1,1)
+	ivec2 texcoord    = ivec2(gl_GlobalInvocationID.xy);
+	// ワークグループ内での現在地(0,0)-(1,1)
+	ivec2 local_coord = ivec2(gl_LocalInvocationID.xy);
+	
+	// ワークグループ内でデータを並列に読み込ませる
+	pixel_xyz[local_coord.y][local_coord.x] =  imageLoad(xyz_in, texcoord);
+	pixel_xy2[local_coord.y][local_coord.x] =  imageLoad(xy2_in, texcoord);
+	pixel_xyzx[local_coord.y][local_coord.x] = imageLoad(xyzx_in, texcoord);
+	
+	// ワークグループ内で処理が終わるのを待つ
+	barrier();
+	memoryBarrierShared();
 
+	// 足し合わせる用
+	vec4 s_xyz = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 s_xy2 = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 s_xyzx = vec4(0.0, 0.0, 0.0, 0.0);
 
-	//tex_outputのtexcoordの位置にpoを入れる
-	//imageStore(tex_output, texcoord, po);
-
+	// ワークグループ内の値を順番に足し合わせていく
+	for(int i = 0; i < 2; i++){
+	  for(int j = 0; j < 2; j++){
+	    s_xyz  += pixel_xyz[i][j];
+		s_xy2  += pixel_xy2[i][j];
+		s_xyzx += pixel_xyzx[i][j];
+	  }
+	}
+	
+	Data[0] = s_xyz.x;
+	Data[1] = s_xyz.y;
+	Data[2] = s_xyz.z;
+	Data[3] = s_xyz.w;
+	Data[4] = s_xy2.x;
+	Data[5] = s_xy2.y;
+	Data[6] = s_xy2.z;
+	Data[7] = s_xyzx.x;
+	Data[8] = s_xyzx.y;
+	Data[9] = s_xyzx.z;
+	
+	
 }

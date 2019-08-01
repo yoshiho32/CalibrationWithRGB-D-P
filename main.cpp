@@ -129,6 +129,7 @@ int main()
 #endif
 
 #if LSM_OPTION
+
   // デプスカメラで対象平面を最小二乗法で計算
   ComputeShader calc_xyz(width, height, "calc_xyz.comp");
   ComputeShader lsm(width, height, "lsm.comp");
@@ -148,6 +149,10 @@ int main()
   GLuint xyzx_tex2;
   glGenTextures(1, &xyzx_tex2);
 
+  // ssboを用いてデータをGPUから取り出す
+  GLuint ssbo;
+  glGenBuffers(1, &ssbo);
+  
 #endif
 
   // 背景色を設定する
@@ -190,7 +195,7 @@ int main()
 	  glBindImageTexture(3, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 
 	  // 計算実行
-	  calc_xyz.calculate();
+	  calc_xyz.calculate(width, height);
 
 	  /* 処理2：データをすべて加算する */
 	  lsm.use();
@@ -215,7 +220,7 @@ int main()
 	  glActiveTexture(GL_TEXTURE5);
 	  glBindImageTexture(5, xyzx_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  // 計算の実行
-	  lsm.calculate();//512*512→32*32のテクスチャに
+	  lsm.calculate(MAX_WH, MAX_WH);//512*512→32*32のテクスチャに
 	  
 	  lsm.use();
 	  // 保存したデータの受け渡し
@@ -238,7 +243,7 @@ int main()
 	  glActiveTexture(GL_TEXTURE5);
 	  glBindImageTexture(5, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  // 計算の実行
-	  lsm.calculate();//32*32→2*2のテクスチャに
+	  lsm.calculate(MAX_WH, MAX_WH);//32*32→2*2のテクスチャに
 
 	  lsm_output.use();
 	  glActiveTexture(GL_TEXTURE0);
@@ -247,11 +252,28 @@ int main()
 	  glBindImageTexture(1, xy2_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  glActiveTexture(GL_TEXTURE2);
 	  glBindImageTexture(2, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-	  // 計算結果の出力先
-
-
-	  lsm_output.calculate();
 	  
+	  // 計算結果の出力先
+	  GLuint ssbo;
+	  glGenBuffers(1, &ssbo);
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  //glBufferData(GL_SHADER_STORAGE_BUFFER, 10, NULL, GL_WRITE_ONLY);//読み出しの場合はいらない気がする、そもそもメモリは出来てるはず
+
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
+	  //glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // バインド解除
+
+	  //処理の実行:結果がfloatでSSBOに入る
+	  lsm_output.calculate(2,2);
+
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  GLfloat *data;
+	  data = (GLfloat *)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
+	  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+	  //std::cout << "after calcurate ->" << data[8] << std::endl;
+
+
 #endif
 
     // 頂点位置の計算
