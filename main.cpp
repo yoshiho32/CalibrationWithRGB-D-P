@@ -33,6 +33,16 @@
 #define NEAR_RENGE 100
 #define FAR_RENGE 4000
 
+#if LSM_OPTION
+// ssboのデータセット
+struct DataSet {
+	GLfloat data_xyz[4];
+	GLfloat data_xy2[4];
+	GLfloat data_xyzx[4];
+  };
+
+#endif
+
 // テクスチャを作成する
 // CLAMP_MODEでテクスチャの端を指定
 // 0 : GL_CLAMP_TO_EDGE  （折り返す
@@ -149,10 +159,17 @@ int main()
   GLuint xyzx_tex2;
   glGenTextures(1, &xyzx_tex2);
 
-  // ssboを用いてデータをGPUから取り出す
+
+  // データ数
+  const GLint count(1);
+  // SSBO を作る
+  //   ・メモリ確保は glBufferData() で行うから一度これを実行しておかないとダメ．
+  //   ・第２引数の size は確保するメモリのサイズをバイト数で指定する．
+  //   ・最後の第４引数 usage は使い方のヒントで読み書き禁止とかではない．
+  //     https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBufferData.xhtml
   GLuint ssbo;
   glGenBuffers(1, &ssbo);
-  
+
 #endif
 
   // 背景色を設定する
@@ -199,7 +216,6 @@ int main()
 
 	  /* 処理2：データをすべて加算する */
 	  lsm.use();
-	  
 	  // 保存したデータの受け渡し
 	  glActiveTexture(GL_TEXTURE0);
 	  glBindImageTexture(0, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
@@ -254,26 +270,31 @@ int main()
 	  glBindImageTexture(2, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  
 	  // 計算結果の出力先
-	  GLuint ssbo;
-	  glGenBuffers(1, &ssbo);
-	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	  //glBufferData(GL_SHADER_STORAGE_BUFFER, 10, NULL, GL_WRITE_ONLY);//読み出しの場合はいらない気がする、そもそもメモリは出来てるはず
 
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBufferData(GL_SHADER_STORAGE_BUFFER, count * sizeof(DataSet) , NULL, GL_STATIC_READ);
 	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
-	  //glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); // バインド解除
 
+	  lsm_output.calculate(2, 2);
+	  
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, 0);
 	  //処理の実行:結果がfloatでSSBOに入る
-	  lsm_output.calculate(2,2);
-
-	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+	  // データの格納先
+	  std::vector<GLfloat> output(count * sizeof(DataSet));
+	  // SSBO から値を取り出す
+	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
 	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	  GLfloat *data;
-	  data = (GLfloat *)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_WRITE);
-	  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
 
-	  //std::cout << "after calcurate ->" << data[8] << std::endl;
+	  for (int i = 0; i < count * sizeof(DataSet); i++) {
+		  std::cout << "-" << output[i];
+	  }
+	  std::cout << sizeof(DataSet) <<std::endl;
+	  
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-
+	  
 #endif
 
     // 頂点位置の計算

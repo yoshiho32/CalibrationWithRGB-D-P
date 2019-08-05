@@ -46,7 +46,9 @@ void main(){
 		s_xyzx += pixel_xyzx[i][j];
 	  }
 	}
-
+	s_xyz  = vec4(0.0, 1.0, 2.0, 3.0);
+	s_xy2  = vec4(4.0, 5.0, 6.0, 7.0);
+	s_xyzx  = vec4(8.0, 9.0, 10.0, 11.0);
 	//workgroup‚Ì‡Z’l‚Æ‚µ‚Äid‚ÌêŠ‚É’l‚ğŠi”[‚·‚é
 	imageStore(xyz_out,  groupid, s_xyz);
 	imageStore(xy2_out,  groupid, s_xy2);
