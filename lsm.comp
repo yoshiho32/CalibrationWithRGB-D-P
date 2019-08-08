@@ -16,6 +16,19 @@ layout (rgba32f, binding = 3) uniform restrict image2D xyz_out;
 layout (rgba32f, binding = 4) uniform restrict image2D xy2_out;
 layout (rgba32f, binding = 5) uniform restrict image2D xyzx_out;
 
+
+struct DataSet{
+  vec4 data_xyz;
+  vec4 data_xy2;
+  vec4 data_xyzx;
+ };
+
+// 計算結果の出力
+layout (std430, binding = 6) buffer Input{
+  DataSet data;
+};
+
+
 void main(){
 	// テクスチャの現在地(0,0)-(512,512)
 	ivec2 texcoord    = ivec2(gl_GlobalInvocationID.xy);
@@ -53,5 +66,13 @@ void main(){
 	imageStore(xyz_out,  groupid, s_xyz);
 	imageStore(xy2_out,  groupid, s_xy2);
 	imageStore(xyzx_out, groupid, s_xyzx);
+
+		s_xyz  = vec4(0.0, 1.0, 2.0, 3.0);
+	s_xy2  = vec4(4.0, 5.0, 6.0, 7.0);
+	s_xyzx  = vec4(8.0, 9.0, 10.0, 11.0);
+	
+	data.data_xyz =s_xyz;
+	data.data_xy2 = s_xyz;
+	data.data_xyzx = s_xyz;
 
 }

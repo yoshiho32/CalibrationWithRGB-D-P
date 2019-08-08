@@ -162,6 +162,7 @@ int main()
 
   // データ数
   const GLint count(1);
+
   // SSBO を作る
   //   ・メモリ確保は glBufferData() で行うから一度これを実行しておかないとダメ．
   //   ・第２引数の size は確保するメモリのサイズをバイト数で指定する．
@@ -169,6 +170,9 @@ int main()
   //     https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBufferData.xhtml
   GLuint ssbo;
   glGenBuffers(1, &ssbo);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+  glBufferData(GL_SHADER_STORAGE_BUFFER, count * sizeof(DataSet), NULL, GL_STATIC_READ);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 #endif
 
@@ -184,6 +188,15 @@ int main()
   {
 #if GENERATE_POSITION
 	  //pcaで平面推定　＊未作成
+
+
+	// 頂点位置の計算
+	position.use();
+	glUniform1i(0, 0);
+	glActiveTexture(GL_TEXTURE0);
+	sensor.getDepth();
+	const std::vector<GLuint> &positionTexture(position.calculate());
+
 #if PCA_OPTION 
 	  pca.use();
 #endif
@@ -195,26 +208,46 @@ int main()
 	  // depthデータの送信
 	  glUniform1i(0, 0);
 	  glActiveTexture(GL_TEXTURE0);
-	  sensor.getDepth();
+	 
+	  glBindTexture(GL_TEXTURE_2D, positionTexture[0]);
 
 	  // 処理結果の保存
 	  // x, y, z, w の保存
 	  makeTex(xyz_tex1, MAX_WH, MAX_WH, 1);
 	  glActiveTexture(GL_TEXTURE1);
-	  glBindImageTexture(1, xyz_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(1, xyz_tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	  // x^2, y^2 の保存
 	  makeTex(xy2_tex1, MAX_WH, MAX_WH, 1);
 	  glActiveTexture(GL_TEXTURE2);
-	  glBindImageTexture(2, xy2_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(2, xy2_tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	  // xy, yz, xz  の保存
 	  makeTex(xyzx_tex1, MAX_WH, MAX_WH, 1);
 	  glActiveTexture(GL_TEXTURE3);
-	  glBindImageTexture(3, xyzx_tex1, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+	  glBindImageTexture(3, xyzx_tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssbo);
 
 	  // 計算実行
 	  calc_xyz.calculate(width, height);
 
-	  /* 処理2：データをすべて加算する */
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, 0);
+	  //処理の実行:結果がfloatでSSBOに入る
+	  // データの格納先
+	  std::vector<GLfloat> output(count * sizeof(DataSet));
+	  // SSBO から値を取り出す
+	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	  for (int i = 0; i < 12; i++) {
+		  std::cout << "-" << output[i];
+	  }
+	  std::cout << std::endl;
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	  
+	  /* 処理2：データをすべて加算する *//*
 	  lsm.use();
 	  // 保存したデータの受け渡し
 	  glActiveTexture(GL_TEXTURE0);
@@ -236,7 +269,32 @@ int main()
 	  glActiveTexture(GL_TEXTURE5);
 	  glBindImageTexture(5, xyzx_tex2, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
 	  // 計算の実行
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBufferData(GL_SHADER_STORAGE_BUFFER, count * sizeof(DataSet), NULL, GL_STATIC_READ);
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssbo);
+
+
+
 	  lsm.calculate(MAX_WH, MAX_WH);//512*512→32*32のテクスチャに
+
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, 0);
+	  //処理の実行:結果がfloatでSSBOに入る
+	  // データの格納先
+	  std::vector<GLfloat> output(count * sizeof(DataSet));
+	  // SSBO から値を取り出す
+	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	  for (int i = 0; i < count * sizeof(DataSet); i++) {
+		  std::cout << "-" << output[i];
+	  }
+	  std::cout << sizeof(DataSet) << std::endl;
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
 	  
 	  lsm.use();
 	  // 保存したデータの受け渡し
@@ -293,16 +351,10 @@ int main()
 	  std::cout << sizeof(DataSet) <<std::endl;
 	  
 	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
+	  */
 	  
 #endif
 
-    // 頂点位置の計算
-    position.use();
-    glUniform1i(0, 0);
-    glActiveTexture(GL_TEXTURE0);
-    sensor.getDepth();
-    const std::vector<GLuint> &positionTexture(position.calculate());
 #endif
 
     // 法線ベクトルの計算
