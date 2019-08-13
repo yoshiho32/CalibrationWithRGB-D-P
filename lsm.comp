@@ -7,15 +7,13 @@ shared vec4 pixel_xyzx[16][16];
 // コンピュートシェーダー上のカーネルサイズ
 layout(local_size_x = 16, local_size_y = 16) in;
 
-// 計算結果の
-layout (rgba32f, binding = 0) uniform restrict image2D xyz_in;
-layout (rgba32f, binding = 1) uniform restrict image2D xy2_in;
-layout (rgba32f, binding = 2) uniform restrict image2D xyzx_in;
+layout (rgba32f, binding = 0) uniform readonly  image2D xyz_in;
+layout (rgba32f, binding = 1) uniform readonly  image2D xy2_in;
+layout (rgba32f, binding = 2) uniform readonly  image2D xyzx_in;
 
-layout (rgba32f, binding = 3) uniform restrict image2D xyz_out;
-layout (rgba32f, binding = 4) uniform restrict image2D xy2_out;
-layout (rgba32f, binding = 5) uniform restrict image2D xyzx_out;
-
+layout (rgba32f, binding = 3) uniform writeonly image2D xyz_out;
+layout (rgba32f, binding = 4) uniform writeonly image2D xy2_out;
+layout (rgba32f, binding = 5) uniform writeonly image2D xyzx_out;
 
 struct DataSet{
   vec4 data_xyz;
@@ -30,13 +28,13 @@ layout (std430, binding = 6) buffer Input{
 
 
 void main(){
-	// テクスチャの現在地(0,0)-(512,512)
-	ivec2 texcoord    = ivec2(gl_GlobalInvocationID.xy);
 	// ワークグループ内での現在地(0,0)-(16,16)
 	ivec2 local_coord = ivec2(gl_LocalInvocationID.xy);
 	// ワークグループの位置(0,0)-(32,32)or(2,2)
 	ivec2 groupid     = ivec2(gl_WorkGroupID.xy);
-	
+	// テクスチャの現在地(0,0)-(512,512)
+	ivec2 texcoord    = groupid*16 + local_coord;
+
 	// ワークグループ内でデータを並列に読み込ませる
 	pixel_xyz[local_coord.y][local_coord.x] =  imageLoad(xyz_in, texcoord);
 	pixel_xy2[local_coord.y][local_coord.x] =  imageLoad(xy2_in, texcoord);
@@ -59,20 +57,9 @@ void main(){
 		s_xyzx += pixel_xyzx[i][j];
 	  }
 	}
-	s_xyz  = vec4(0.0, 1.0, 2.0, 3.0);
-	s_xy2  = vec4(4.0, 5.0, 6.0, 7.0);
-	s_xyzx  = vec4(8.0, 9.0, 10.0, 11.0);
+
 	//workgroupの合算値としてidの場所に値を格納する
 	imageStore(xyz_out,  groupid, s_xyz);
 	imageStore(xy2_out,  groupid, s_xy2);
 	imageStore(xyzx_out, groupid, s_xyzx);
-
-		s_xyz  = vec4(0.0, 1.0, 2.0, 3.0);
-	s_xy2  = vec4(4.0, 5.0, 6.0, 7.0);
-	s_xyzx  = vec4(8.0, 9.0, 10.0, 11.0);
-	
-	data.data_xyz =s_xyz;
-	data.data_xy2 = s_xyz;
-	data.data_xyzx = s_xyz;
-
 }
