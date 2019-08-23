@@ -3,6 +3,9 @@
 #define MILLIMETER 0.001
 #define DEPTH_SCALE (-65535.0 * MILLIMETER)
 
+#define KARNEL_WIDTH   0.00195
+#define KARNEL_HEIGHT  0.00236
+
 // コンピュートシェーダー上のカーネルサイズ
 layout(local_size_x = 1, local_size_y = 1) in;
 
@@ -22,6 +25,9 @@ layout (std430, binding = 6) buffer Input{
 
 void main(){	
 	// 現在のデプス
-	data.data_xyz = texture(depth, vec2(0.1953125,0.1953125))*DEPTH_SCALE;
+
+	vec2 localplace = vec2(KARNEL_WIDTH * 100,  100*KARNEL_HEIGHT);
+
+	data.data_xyz = texture(depth, localplace)*DEPTH_SCALE;
 
 }
