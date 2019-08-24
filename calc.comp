@@ -12,6 +12,10 @@ layout(local_size_x = 1, local_size_y = 1) in;
 // 現在のデプスデータ
 layout (location = 0) uniform sampler2D depth;
 
+layout (rgba32f, binding = 1) uniform writeonly image2D xyz_out;
+layout (rgba32f, binding = 2) uniform writeonly image2D xy2_out;
+layout (rgba32f, binding = 3) uniform writeonly image2D xyzx_out;
+
 struct DataSet{
   vec4 data_xyz;
   vec4 data_xy2;
@@ -25,9 +29,18 @@ layout (std430, binding = 6) buffer Input{
 
 void main(){	
 	// 現在のデプス
+	ivec2 itexcoord = ivec2(gl_GlobalInvocationID.xy);
+	vec2 depthcoord = vec2(itexcoord.x * KARNEL_WIDTH, itexcoord.y * KARNEL_HEIGHT); 
+	vec4 p = vec4(itexcoord, texture(depth, depthcoord).x * DEPTH_SCALE, 1.0);
 
-	vec2 localplace = vec2(KARNEL_WIDTH * 100,  100*KARNEL_HEIGHT);
+	//s_xyz  = p;
+	vec4 s_xy2  = vec4(p.x*p.x, p.y*p.y, p.z*p.z, p.w);
+	vec4 s_xyzx = vec4(p.x*p.y, p.y*p.z, p.x*p.z, p.w);
 
-	data.data_xyz = texture(depth, localplace)*DEPTH_SCALE;
+	data.data_xyz = p;
+
+	imageStore(xyz_out, itexcoord, p);
+	imageStore(xy2_out, itexcoord, s_xy2);
+	imageStore(xyzx_out, itexcoord, s_xyzx);
 
 }

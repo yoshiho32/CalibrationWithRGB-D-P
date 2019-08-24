@@ -30,6 +30,36 @@ struct DataSet {
 	GLfloat data_xyzx[4];
 };
 
+// テクスチャを作成する
+// CLAMP_MODEでテクスチャの端を指定
+// 0 : GL_CLAMP_TO_EDGE  （折り返す
+// デフォルト	 1 : GL_CLAMP_TO_BORDER (borderで塗る（真っ黒）
+void makeTex(GLuint p, int width, int height, int CLAMP_MODE = 1) {
+
+	// テクスチャの作成
+	glBindTexture(GL_TEXTURE_2D, p);
+
+	// LAP_MODEの値によって挙動を変える
+	if (CLAMP_MODE == 0) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
+
+	if (CLAMP_MODE == 1) {
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		static const GLfloat border[] = { 0.0, 0.0, 0.0, 0.0 };
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, border);
+	}
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+
+	//glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
 //
 // メインプログラム
 //
@@ -88,9 +118,11 @@ int main()
   // 頂点位置から法線ベクトルを計算するシェーダ
   const Calculate normal(width, height, "normal.frag");
 
+  // デプスデータから計算に必要な値を計算するシェーダ
   ComputeShader comp(width, height, "calc.comp");
 
-  const GLint count(10);
+  // データ出力用のSSBO
+  const GLint count(1);
 
   // SSBO を作る
   //   ・メモリ確保は glBufferData() で行うから一度これを実行しておかないとダメ．
@@ -103,6 +135,18 @@ int main()
   glBufferData(GL_SHADER_STORAGE_BUFFER, count * sizeof(DataSet), NULL, GL_DYNAMIC_DRAW);
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
+  // 計算用のテクスチャ
+  GLuint tex1;
+  glGenTextures(1, &tex1);
+  makeTex(tex1, width, height);
+
+  GLuint tex2;
+  glGenTextures(1, &tex2);
+  makeTex(tex2, width, height);
+
+  GLuint tex3;
+  glGenTextures(1, &tex3);
+  makeTex(tex3, width, height);
 
   // 背景色を設定する
   glClearColor(background[0], background[1], background[2], background[3]);
@@ -134,11 +178,21 @@ int main()
 #endif
     const std::vector<GLuint> &normalTexture(normal.calculate());
 	
+	//computeshaderを使用する
 	comp.use();
 
 	glUniform1i(0, 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, positionTexture[0]);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	// 計算結果の出力先
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
