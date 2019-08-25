@@ -23,7 +23,7 @@ struct DataSet{
  };
 
 // ŒvZŒ‹‰Ê‚Ìo—Í
-layout (std430, binding = 6) buffer Input{
+layout (std430, binding = 7) buffer Input{
   DataSet data;
 };
 
@@ -36,8 +36,10 @@ void main(){
 	//s_xyz  = p;
 	vec4 s_xy2  = vec4(p.x*p.x, p.y*p.y, p.z*p.z, p.w);
 	vec4 s_xyzx = vec4(p.x*p.y, p.y*p.z, p.x*p.z, p.w);
-
+	
 	data.data_xyz = p;
+	data.data_xy2 = s_xy2;
+	data.data_xyzx = s_xyzx;
 
 	imageStore(xyz_out, itexcoord, p);
 	imageStore(xy2_out, itexcoord, s_xy2);

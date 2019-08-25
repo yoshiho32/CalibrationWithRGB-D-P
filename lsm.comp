@@ -1,0 +1,72 @@
+#version 430 core
+
+shared vec4 pixel_xyz[16][16];
+shared vec4 pixel_xy2[16][16];
+shared vec4 pixel_xyzx[16][16];
+
+// コンピュートシェーダー上のカーネルサイズ
+layout(local_size_x = 2, local_size_y = 2) in;
+
+layout (rgba32f, binding = 1) uniform readonly  image2D xyz_in;
+layout (rgba32f, binding = 2) uniform readonly  image2D xy2_in;
+layout (rgba32f, binding = 3) uniform readonly  image2D xyzx_in;
+
+layout (rgba32f, binding = 4) uniform writeonly image2D xyz_out;
+layout (rgba32f, binding = 5) uniform writeonly image2D xy2_out;
+layout (rgba32f, binding = 6) uniform writeonly image2D xyzx_out;
+
+struct DataSet{
+  vec4 data_xyz;
+  vec4 data_xy2;
+  vec4 data_xyzx;
+ };
+
+// 計算結果の出力
+layout (std430, binding = 7) buffer Input{
+  DataSet data;
+};
+
+
+void main(){
+	// ワークグループ内での現在地(0,0)-(16,16)
+	ivec2 local_coord = ivec2(gl_LocalInvocationID.xy);
+	// ワークグループの位置(0,0)-(32,32)or(2,2)
+	ivec2 groupid     = ivec2(gl_WorkGroupID.xy);
+	// テクスチャの現在地(0,0)-(512,512)
+	ivec2 texcoord    = groupid*16 + local_coord;
+
+	// ワークグループ内でデータを並列に読み込ませる
+	pixel_xyz[local_coord.y][local_coord.x] =  imageLoad(xyz_in, ivec2(gl_GlobalInvocationID.xy));
+	pixel_xy2[local_coord.y][local_coord.x] =  imageLoad(xy2_in, ivec2(gl_GlobalInvocationID.xy));
+	pixel_xyzx[local_coord.y][local_coord.x] = imageLoad(xyzx_in, ivec2(gl_GlobalInvocationID.xy));
+
+	// ワークグループ内で処理が終わるのを待つ
+	barrier();
+	memoryBarrierShared();
+
+	// 足し合わせる用
+	vec4 s_xyz = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 s_xy2 = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 s_xyzx = vec4(0.0, 0.0, 0.0, 0.0);
+
+	// ワークグループ内の値を順番に足し合わせていく
+	for(int i = 0; i < 16; i++){
+	  for(int j = 0; j < 16; j++){
+	    s_xyz  += pixel_xyz[i][j];
+		s_xy2  += pixel_xy2[i][j];
+		s_xyzx += pixel_xyzx[i][j];
+	  }
+	}
+
+	
+	data.data_xyz = pixel_xyz[10][10];//imageLoad(xyz_in, ivec2(1,1));
+	data.data_xy2 = vec4(gl_GlobalInvocationID.xy, 1,1);
+	data.data_xyzx = imageLoad(xyzx_in, ivec2(1,1));
+
+
+	//workgroupの合算値としてidの場所に値を格納する
+	imageStore(xyz_out,  groupid, s_xyz);
+	imageStore(xy2_out,  groupid, s_xy2);
+	imageStore(xyzx_out, groupid, s_xyzx);
+	
+}

@@ -121,12 +121,16 @@ int main()
   // デプスデータから計算に必要な値を計算するシェーダ
   ComputeShader comp(width, height, "calc.comp");
 
+  // lsmを計算するシェーダ
+  ComputeShader lsm(width, width, "lsm.comp");
+
   // データ出力用のSSBO
   const GLint count(1);
 
   // SSBO を作る
   //   ・メモリ確保は glBufferData() で行うから一度これを実行しておかないとダメ．
   //   ・第２引数の size は確保するメモリのサイズをバイト数で指定する．
+  //   ・最後の第４引数 usage は使い方のヒントで読み書き禁止とかではない．
   //   ・最後の第４引数 usage は使い方のヒントで読み書き禁止とかではない．
   //     https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glBufferData.xhtml
   GLuint ssbo;
@@ -147,6 +151,18 @@ int main()
   GLuint tex3;
   glGenTextures(1, &tex3);
   makeTex(tex3, width, height);
+
+  GLuint tex4;
+  glGenTextures(1, &tex4);
+  makeTex(tex4, width, width);
+
+  GLuint tex5;
+  glGenTextures(1, &tex5);
+  makeTex(tex5, width, width);
+
+  GLuint tex6;
+  glGenTextures(1, &tex6);
+  makeTex(tex6, width, width);
 
   // 背景色を設定する
   glClearColor(background[0], background[1], background[2], background[3]);
@@ -194,13 +210,11 @@ int main()
 	glActiveTexture(GL_TEXTURE3);
 	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-	// 計算結果の出力先
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, ssbo);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
 
 	comp.calculate(width, height);
-
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, 0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
 	//処理の実行:結果がfloatでSSBOに入る
 	// データの格納先
 	std::vector<GLfloat> output(count * sizeof(DataSet));
@@ -210,12 +224,62 @@ int main()
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
 
+	std::cout << "calc : ";
 	for (int i = 0; i < 12; i++) {
 		std::cout << output[i] << " - ";
 	}
 	std::cout << sizeof(DataSet) << std::endl;
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	
+	// lsm-computeshaderを使用する
+
+	lsm.use();
+	glActiveTexture(GL_TEXTURE1);
+	glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE4);
+	glBindImageTexture(4, tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE5);
+	glBindImageTexture(5, tex2, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE6);
+	glBindImageTexture(6, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+
+	// 計算結果の出力先
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	lsm.calculate(32, 32);
+
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+	//処理の実行:結果がfloatでSSBOに入る
+	// データの格納先
+	//std::vector<GLfloat> output(count * sizeof(DataSet));
+	// SSBO から値を取り出す
+	//   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	//   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	std::cout << "lsm : ";
+	for (int i = 0; i < 12; i++) {
+		std::cout << output[i] << " - ";
+	}
+	std::cout << std::endl;
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
 
 	// 画面消去
     window.clear();
