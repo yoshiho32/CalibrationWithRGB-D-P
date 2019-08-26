@@ -56,7 +56,7 @@ ComputeShader::~ComputeShader() {
 const std::vector<GLuint> &ComputeShader::calculate(int karnel_w, int karnel_h) const
 {
 	// ˆ—‚ÌÀs
-	glDispatchCompute(width, height, 1);
+	glDispatchCompute(karnel_w, karnel_h, 1);
 
 	//‰æ‘f‚Ì‘‚«‚İ‚ªI‚í‚é‚Ü‚Å‘Ò‚Â
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

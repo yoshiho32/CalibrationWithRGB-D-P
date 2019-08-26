@@ -5,7 +5,7 @@ shared vec4 pixel_xy2[16][16];
 shared vec4 pixel_xyzx[16][16];
 
 // コンピュートシェーダー上のカーネルサイズ
-layout(local_size_x = 2, local_size_y = 2) in;
+layout(local_size_x = 16, local_size_y = 16) in;
 
 layout (rgba32f, binding = 1) uniform readonly  image2D xyz_in;
 layout (rgba32f, binding = 2) uniform readonly  image2D xy2_in;
@@ -58,11 +58,9 @@ void main(){
 	  }
 	}
 
-	
 	data.data_xyz = pixel_xyz[10][10];//imageLoad(xyz_in, ivec2(1,1));
-	data.data_xy2 = vec4(gl_GlobalInvocationID.xy, 1,1);
+	data.data_xy2 = vec4(gl_WorkGroupID.xy, local_coord);
 	data.data_xyzx = imageLoad(xyzx_in, ivec2(1,1));
-
 
 	//workgroupの合算値としてidの場所に値を格納する
 	imageStore(xyz_out,  groupid, s_xyz);

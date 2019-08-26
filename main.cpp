@@ -123,6 +123,7 @@ int main()
 
   // lsmを計算するシェーダ
   ComputeShader lsm(width, width, "lsm.comp");
+  ComputeShader lsmOutput(2, 2, "lsmOutput.comp");
 
   // データ出力用のSSBO
   const GLint count(1);
@@ -154,15 +155,27 @@ int main()
 
   GLuint tex4;
   glGenTextures(1, &tex4);
-  makeTex(tex4, width, width);
+  makeTex(tex4, 32, 32);
 
   GLuint tex5;
   glGenTextures(1, &tex5);
-  makeTex(tex5, width, width);
+  makeTex(tex5, 32, 32);
 
   GLuint tex6;
   glGenTextures(1, &tex6);
-  makeTex(tex6, width, width);
+  makeTex(tex6, 32, 32);
+
+  GLuint tex7;
+  glGenTextures(1, &tex7);
+  makeTex(tex7, 2, 2);
+
+  GLuint tex8;
+  glGenTextures(1, &tex8);
+  makeTex(tex8, 2, 2);
+
+  GLuint tex9;
+  glGenTextures(1, &tex9);
+  makeTex(tex9, 2, 2);
 
   // 背景色を設定する
   glClearColor(background[0], background[1], background[2], background[3]);
@@ -237,30 +250,65 @@ int main()
 
 	lsm.use();
 	glActiveTexture(GL_TEXTURE1);
-	glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 
 	glActiveTexture(GL_TEXTURE2);
-	glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 
 	glActiveTexture(GL_TEXTURE3);
-	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
 
 	glActiveTexture(GL_TEXTURE4);
-	glBindImageTexture(4, tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(4, tex4, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	glActiveTexture(GL_TEXTURE5);
-	glBindImageTexture(5, tex2, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(5, tex5, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
 	glActiveTexture(GL_TEXTURE6);
-	glBindImageTexture(6, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(6, tex6, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
+	
+	lsm.calculate(32, 32);
 
+	
+	// 二回目の計算
+	lsm.use();
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindImageTexture(1, tex4, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindImageTexture(2, tex5, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindImageTexture(3, tex6, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE4);
+	glBindImageTexture(4, tex7, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE5);
+	glBindImageTexture(5, tex8, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE6);
+	glBindImageTexture(6, tex9, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	
+	
+	lsm.calculate(2, 2);
+
+	lsmOutput.use();
+	glActiveTexture(GL_TEXTURE4);
+	glBindImageTexture(4, tex7, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE5);
+	glBindImageTexture(5, tex8, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	glActiveTexture(GL_TEXTURE6);
+	glBindImageTexture(6, tex9, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	// 計算結果の出力先
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
 
-	lsm.calculate(32, 32);
-
+	lsmOutput.calculate(1, 1);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
 	//処理の実行:結果がfloatでSSBOに入る
 	// データの格納先
@@ -273,12 +321,11 @@ int main()
 
 	std::cout << "lsm : ";
 	for (int i = 0; i < 12; i++) {
-		std::cout << output[i] << " - ";
+		std::cout << output[i] << " ";
 	}
 	std::cout << std::endl;
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
 
 
 	// 画面消去

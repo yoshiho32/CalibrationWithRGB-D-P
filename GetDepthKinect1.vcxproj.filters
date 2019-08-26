@@ -106,5 +106,8 @@
     <None Include="lsm.comp">
       <Filter>シェーダー ファイル</Filter>
     </None>
+    <None Include="lsmOutput.comp">
+      <Filter>シェーダー ファイル</Filter>
+    </None>
   </ItemGroup>
 </Project>
