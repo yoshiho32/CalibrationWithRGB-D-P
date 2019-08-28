@@ -28,17 +28,17 @@ layout (std430, binding = 7) buffer Input{
 
 
 void main(){
-	// ワークグループ内での現在地(0,0)-(16,16)
+	// ワークグループ内での現在地(0,0)-(15,15)
 	ivec2 local_coord = ivec2(gl_LocalInvocationID.xy);
-	// ワークグループの位置(0,0)-(32,32)or(2,2)
+	// ワークグループの位置(0,0)-(31,31)or(1,1)
 	ivec2 groupid     = ivec2(gl_WorkGroupID.xy);
-	// テクスチャの現在地(0,0)-(512,512)
+	// テクスチャの現在地(0,0)-(511,511)
 	ivec2 texcoord    = groupid*16 + local_coord;
 
 	// ワークグループ内でデータを並列に読み込ませる
-	pixel_xyz[local_coord.y][local_coord.x] =  imageLoad(xyz_in, ivec2(gl_GlobalInvocationID.xy));
-	pixel_xy2[local_coord.y][local_coord.x] =  imageLoad(xy2_in, ivec2(gl_GlobalInvocationID.xy));
-	pixel_xyzx[local_coord.y][local_coord.x] = imageLoad(xyzx_in, ivec2(gl_GlobalInvocationID.xy));
+	pixel_xyz[local_coord.y][local_coord.x]  = imageLoad(xyz_in, texcoord);
+	pixel_xy2[local_coord.y][local_coord.x]  = imageLoad(xy2_in, texcoord);
+	pixel_xyzx[local_coord.y][local_coord.x] = imageLoad(xyzx_in, texcoord);
 
 	// ワークグループ内で処理が終わるのを待つ
 	barrier();
@@ -48,18 +48,19 @@ void main(){
 	vec4 s_xyz = vec4(0.0, 0.0, 0.0, 0.0);
 	vec4 s_xy2 = vec4(0.0, 0.0, 0.0, 0.0);
 	vec4 s_xyzx = vec4(0.0, 0.0, 0.0, 0.0);
-
+	int k = 0;
 	// ワークグループ内の値を順番に足し合わせていく
 	for(int i = 0; i < 16; i++){
 	  for(int j = 0; j < 16; j++){
 	    s_xyz  += pixel_xyz[i][j];
 		s_xy2  += pixel_xy2[i][j];
 		s_xyzx += pixel_xyzx[i][j];
+		k++;
 	  }
 	}
-
-	data.data_xyz = pixel_xyz[10][10];//imageLoad(xyz_in, ivec2(1,1));
-	data.data_xy2 = vec4(gl_WorkGroupID.xy, local_coord);
+	// データのチェック用に色々入れて確認する
+	data.data_xyz = s_xyz;
+	data.data_xy2 = vec4(k, 0, gl_GlobalInvocationID.xy);
 	data.data_xyzx = imageLoad(xyzx_in, ivec2(1,1));
 
 	//workgroupの合算値としてidの場所に値を格納する
