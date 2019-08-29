@@ -1,0 +1,117 @@
+#version 430 core
+
+// コンピュートシェーダー上のカーネルサイズ
+layout(local_size_x = 1, local_size_y = 1) in;
+
+struct DataSet{
+  vec4 data_xyz;
+  vec4 data_xy2;
+  vec4 data_xyzx;
+ };
+
+// 計算結果の出力
+layout (std430, binding = 7) buffer Input{
+  DataSet data;
+};
+
+void main(){
+	
+	int N = 3;
+
+	// 求めた和を行列の要素として二次元配列を生成
+	mat3 matA = {
+	{1,				   data.data_xyz[0],  data.data_xyz[1] },
+	{data.data_xyz[0], data.data_xy2[0],  data.data_xyzx[0]},
+	{data.data_xyz[1], data.data_xyzx[0], data.data_xy2[1]}	
+	};
+
+	// 分解した下三角行列L
+	mat3 matL = {
+	  {0, 0, 0},
+	  {0, 0, 0},
+	  {0, 0, 0}
+	};
+
+	// 分解した上三角行列U
+	mat3 matU = {
+	  {1, 0, 0},
+	  {0, 1, 0},
+	  {0, 0, 1}
+	};
+	
+	// 分解後に利用するバッファ用行列
+	mat3 lu = {
+	  {0, 0, 0},
+	  {0, 0, 0},
+	  {0, 0, 0}
+	};
+	
+	vec3 b = {
+	  data.data_xyz[2], data.data_xyzx[2], data.data_xyzx[1]
+	};
+
+	for(int i = 0; i < N; i++){
+	  
+	  int n = N - i - 1;
+	  
+	  // l0成分をコピー
+	  float l0 = matL[i][i] = matA[0][0];
+
+	  // l1成分をコピー
+	  float l1[n];
+	  for(int j = 0; j < n; j++) {
+	    matL[j + i + 1][i] = l1[j] = matA[j+1][0];
+		}
+	  // u1^T成分をコピー
+	  float u1[n];
+	  for(int j = 0; j < n; j++) {
+	    matU[i][j + i + 1] = u1[j] = matA[0][j+1] / l0;
+		}
+	  // luを求める
+	  for (int j = 0; j < n; j++){
+	    for (int k = 0; k < n; k++){
+		  lu[j][k] = l1[j] * u1[k];
+		}
+	  }
+
+	  // A1を求める
+	  float A1[n][n];
+	  for(int j = 0; j< n; j++){
+		for (int k = 0; k < n; k++){
+		  A1[j][k] = matA[j+1][k+1] - lu[j][k];
+		}
+	  }
+
+	  // A1を改めてmatAとして再帰的に回す
+	  matA = A1;
+	}
+
+	// 求めたLU行列を使って連立方程式を解く
+	float yy[N];// ???????????????????
+	for (int i = 0; i < N; i++){
+	  float sum = 0;
+	  for (int k = 0; k <= i - 1; k++){
+	    sum += matL[i][k] * yy[k];
+	  }
+	  yy[i] = (b[i] - sum) / matL[i][i];
+	}
+
+	float xx[N];// ??????
+	for (int i = 0; i < N; i++){
+	  float sum = 0;
+	  for (int k = 0; k <= i - 1; k++){
+	    sum += matL[i][k] * xx[k];
+	  }
+	  xx[i] = yy[i] - sum;
+	}
+
+
+	data.data_xyz = vec4(texture(depth, depthcoord+0.00002).x, 0, itexcoord);
+	data.data_xy2 = s_xy2;
+	data.data_xyzx = s_xyzx;
+
+	imageStore(xyz_out, itexcoord, p);
+	imageStore(xy2_out, itexcoord, s_xy2);
+	imageStore(xyzx_out, itexcoord, s_xyzx);
+
+}

@@ -29,6 +29,9 @@
 // lsmを用いる際は 1
 #define LSM_OPTION 1
 
+// LU分解を行う部分
+#define LU_DEP 1
+
 // ssboのデータセット
 struct DataSet {
 	GLfloat data_xyz[4];
@@ -131,6 +134,9 @@ int main()
   // lsmを計算するシェーダ
   ComputeShader lsm(width, width, "lsm.comp");
   ComputeShader lsmOutput(2, 2, "lsmOutput.comp");
+
+  // LU分解を計算するシェーダ
+  ComputeShader ludep(1, 1, "ludep.comp");
 
   // データ出力用のSSBO
   const GLint count(1);
@@ -386,6 +392,19 @@ int main()
 	std::cout << std::endl;
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+#if LU_DEP 
+	
+	ludep.use();
+	// 計算結果の出力先
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	ludep.calculate(1, 1);
+
+
+#endif
+
 
 #endif
 

@@ -176,6 +176,7 @@
     <None Include="calc.comp" />
     <None Include="lsm.comp" />
     <None Include="lsmOutput.comp" />
+    <None Include="ludep.comp" />
     <None Include="normal.frag" />
     <None Include="position.frag" />
     <None Include="rectangle.vert" />
