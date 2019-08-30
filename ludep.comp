@@ -25,6 +25,14 @@ void main(){
 	{data.data_xyz[1], data.data_xyzx[0], data.data_xy2[1]}	
 	};
 
+	// LU分解が出来ているかのサンプル行列
+	//mat3 matA = {
+	//{2,  1,  1},
+	//{4,  1,  0},
+	//{-2, 2,  1}
+	//};
+
+
 	// 分解した下三角行列L
 	mat3 matL = {
 	  {0, 0, 0},
@@ -49,6 +57,8 @@ void main(){
 	vec3 b = {
 	  data.data_xyz[2], data.data_xyzx[2], data.data_xyzx[1]
 	};
+	// LU分解が出来ているかのサンプル行列
+	//vec3 b = vec3(1, -2, 7);
 
 	for(int i = 0; i < N; i++){
 	  
@@ -58,14 +68,14 @@ void main(){
 	  float l0 = matL[i][i] = matA[0][0];
 
 	  // l1成分をコピー
-	  float l1[n];
+	  float l1[3];
 	  for(int j = 0; j < n; j++) {
-	    matL[j + i + 1][i] = l1[j] = matA[j+1][0];
+	    matL[j + i + 1][i] = l1[j] = matA[j + 1][0];
 		}
 	  // u1^T成分をコピー
-	  float u1[n];
+	  float u1[3];
 	  for(int j = 0; j < n; j++) {
-	    matU[i][j + i + 1] = u1[j] = matA[0][j+1] / l0;
+	    matU[i][j + i + 1] = u1[j] = matA[0][j + 1] / l0;
 		}
 	  // luを求める
 	  for (int j = 0; j < n; j++){
@@ -75,10 +85,10 @@ void main(){
 	  }
 
 	  // A1を求める
-	  float A1[n][n];
-	  for(int j = 0; j< n; j++){
+	  mat3 A1;
+	  for(int j = 0; j < n; j++){
 		for (int k = 0; k < n; k++){
-		  A1[j][k] = matA[j+1][k+1] - lu[j][k];
+		  A1[j][k] = matA[j + 1][k + 1] - lu[j][k];
 		}
 	  }
 
@@ -87,7 +97,7 @@ void main(){
 	}
 
 	// 求めたLU行列を使って連立方程式を解く
-	float yy[N];// ???????????????????
+	float yy[3];// ???????????????????
 	for (int i = 0; i < N; i++){
 	  float sum = 0;
 	  for (int k = 0; k <= i - 1; k++){
@@ -96,22 +106,16 @@ void main(){
 	  yy[i] = (b[i] - sum) / matL[i][i];
 	}
 
-	float xx[N];// ??????
-	for (int i = 0; i < N; i++){
+	float xx[3];// ??????
+	for (int i = N - 1; i >= 0; i--){
 	  float sum = 0;
-	  for (int k = 0; k <= i - 1; k++){
-	    sum += matL[i][k] * xx[k];
+	  for (int k = i + 1; k <= N - 1; k++){
+	    sum += matU[i][k] * xx[k];
 	  }
 	  xx[i] = yy[i] - sum;
 	}
 
-
-	data.data_xyz = vec4(texture(depth, depthcoord+0.00002).x, 0, itexcoord);
-	data.data_xy2 = s_xy2;
-	data.data_xyzx = s_xyzx;
-
-	imageStore(xyz_out, itexcoord, p);
-	imageStore(xy2_out, itexcoord, s_xy2);
-	imageStore(xyzx_out, itexcoord, s_xyzx);
-
+	// サンプル行列を使用している際はx = -1, y = 2, z = 1になるはず
+	data.data_xyz = vec4(xx[0], xx[1], xx[2], 1);
+	
 }

@@ -23,13 +23,13 @@
 // 頂点位置の生成をシェーダ (position.frag) で行うなら 1
 #define GENERATE_POSITION 1
 
-// ssboでデータのチェックを行う際は 1
+// SSBOのデータのチェックを行う際は 1
 #define DATACHECK 0
 
 // lsmを用いる際は 1
 #define LSM_OPTION 1
 
-// LU分解を行う部分
+// LU分解を行う際は 1
 #define LU_DEP 1
 
 // ssboのデータセット
@@ -65,7 +65,7 @@ void makeTex(GLuint p, int width, int height, int CLAMP_MODE = 1) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 
-	//glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 
@@ -89,8 +89,8 @@ int main()
   // OpenGL Version 3.2 Core Profile を選択する
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+  //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   
 
   // ウィンドウを開く
@@ -204,6 +204,7 @@ int main()
   // ウィンドウが開いている間くり返し描画する
   while (!window.shouldClose())
   {
+
 #if GENERATE_POSITION
     // 頂点位置の計算
     position.use();
@@ -224,8 +225,9 @@ int main()
 #endif
     const std::vector<GLuint> &normalTexture(normal.calculate());
 
+	// LSMの計算を行う
 #if LSM_OPTION 
-	//computeshaderを使用する
+	// computeshaderを使用する
 	comp.use();
 
 	glUniform1i(0, 0);
@@ -240,6 +242,7 @@ int main()
 
 	glActiveTexture(GL_TEXTURE3);
 	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
 #if DATACHECK
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
@@ -265,7 +268,7 @@ int main()
 #endif
 	
 	// lsm-computeshaderを使用する
-	// 512-512を32-32にする
+	// 512-512 を 32-32 にする
 	lsm.use();
 	glActiveTexture(GL_TEXTURE1);
 	glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
@@ -313,7 +316,7 @@ int main()
 	lsm.calculate(32, 32);
 #endif
 	
-	// 二回目の計算
+	// 二回目の計算 32-32 を 2-2 にする
 	lsm.use();
 
 	glActiveTexture(GL_TEXTURE1);
@@ -377,6 +380,7 @@ int main()
 
 	lsmOutput.calculate(1, 1);
 
+#if DATACHECK
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
 	// SSBO から値を取り出す
 	//   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
@@ -392,7 +396,9 @@ int main()
 	std::cout << std::endl;
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+#endif
 
+	// LU分解を行っている部分
 #if LU_DEP 
 	
 	ludep.use();
@@ -402,6 +408,16 @@ int main()
 
 	ludep.calculate(1, 1);
 
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+
+	// SSBO から値を取り出す
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	// 計算結果をコマンドラインに出力する
+	std::cout << "x = " << output[0] << ", y = " << output[1] << ", z = " << output[2] << std::endl;
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 #endif
 
