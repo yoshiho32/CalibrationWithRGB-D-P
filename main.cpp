@@ -27,6 +27,7 @@
 #define DATACHECK 1
 #define DATACHECK_CALC 0
 
+// デプスデータをNEARからFARの間にあるものだけを使う＊現状はシェーダーに渡してないので無意味な数字
 #define FAR  300
 #define NEAR 20
 

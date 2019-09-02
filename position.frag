@@ -33,6 +33,6 @@ void main(void)
   // デプス値を取り出す
   float z = s(texture(depth, texcoord).r);
 
-  // デプス値からカメラ座標値を求める
+  // デプス値からカメラ座標値を求める // デプスデータの有効範囲を決めて描画
   position = vec3((texcoord - 0.5) * scale * z * step(-FAR, -z *  DEPTH_SCALE) * step (NEAR, z * DEPTH_SCALE), z);
 }

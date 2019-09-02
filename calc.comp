@@ -36,6 +36,7 @@ void main(){
 	vec2 depthcoord = vec2(itexcoord.x * KARNEL_WIDTH, itexcoord.y * KARNEL_HEIGHT); 
 	vec4 p = vec4(itexcoord, texture(depth, depthcoord).x * DEPTH_SCALE, 1.0);
 
+	// FARより遠いをマイナスで表現、NEARより近いを普通にステップする NEAR < p.z < FARで有効化
 	p = p * step(-FAR, -p.z) * step(NEAR, p.z);
 	//s_xyz  = p;
 	vec4 s_xy2  = vec4(p.x*p.x, p.y*p.y, p.z*p.z, p.w);
