@@ -24,7 +24,11 @@
 #define GENERATE_POSITION 1
 
 // SSBOのデータのチェックを行う際は 1
-#define DATACHECK 0
+#define DATACHECK 1
+#define DATACHECK_CALC 0
+
+#define FAR  300
+#define NEAR 20
 
 // lsmを用いる際は 1
 #define LSM_OPTION 1
@@ -86,12 +90,11 @@ int main()
   atexit(glfwTerminate);
   // データ数
 
-  // OpenGL Version 3.2 Core Profile を選択する
+  // OpenGL Version 4.3 Core Profile を選択する
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-  
 
   // ウィンドウを開く
   Window window(640, 480, "Depth Map Viewer");
@@ -243,7 +246,7 @@ int main()
 	glActiveTexture(GL_TEXTURE3);
 	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-#if DATACHECK
+#if DATACHECK_CALC
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
 
@@ -420,7 +423,6 @@ int main()
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 #endif
-
 
 #endif
 

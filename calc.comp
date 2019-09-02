@@ -6,6 +6,9 @@
 #define KARNEL_WIDTH   0.00195
 #define KARNEL_HEIGHT  0.00236
 
+#define FAR  300
+#define NEAR 20
+
 // コンピュートシェーダー上のカーネルサイズ
 layout(local_size_x = 1, local_size_y = 1) in;
 
@@ -27,17 +30,18 @@ layout (std430, binding = 7) buffer Input{
   DataSet data;
 };
 
-void main(){	
+void main(){
 	// 現在のデプス
 	ivec2 itexcoord = ivec2(gl_GlobalInvocationID.xy);
 	vec2 depthcoord = vec2(itexcoord.x * KARNEL_WIDTH, itexcoord.y * KARNEL_HEIGHT); 
 	vec4 p = vec4(itexcoord, texture(depth, depthcoord).x * DEPTH_SCALE, 1.0);
 
+	p = p * step(-FAR, -p.z) * step(NEAR, p.z);
 	//s_xyz  = p;
 	vec4 s_xy2  = vec4(p.x*p.x, p.y*p.y, p.z*p.z, p.w);
 	vec4 s_xyzx = vec4(p.x*p.y, p.y*p.z, p.x*p.z, p.w);
 	
-	data.data_xyz = vec4(texture(depth, depthcoord+0.00002).x, 0, itexcoord);
+	data.data_xyz = p;
 	data.data_xy2 = s_xy2;
 	data.data_xyzx = s_xyzx;
 

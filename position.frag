@@ -4,6 +4,9 @@
 #define DEPTH_SCALE (-65535.0 * MILLIMETER)
 #define DEPTH_MAXIMUM (-10.0)
 
+#define FAR  300
+#define NEAR 20
+
 // スケール
 const vec2 scale = vec2(
   1.546592,
@@ -31,5 +34,5 @@ void main(void)
   float z = s(texture(depth, texcoord).r);
 
   // デプス値からカメラ座標値を求める
-  position = vec3((texcoord - 0.5) * scale * z, z);
+  position = vec3((texcoord - 0.5) * scale * z * step(-FAR, -z *  DEPTH_SCALE) * step (NEAR, z * DEPTH_SCALE), z);
 }

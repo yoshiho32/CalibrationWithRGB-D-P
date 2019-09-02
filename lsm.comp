@@ -61,7 +61,7 @@ void main(){
 	// データのチェック用に色々入れて確認する
 	data.data_xyz = s_xyz;
 	data.data_xy2 = vec4(k, 0, gl_GlobalInvocationID.xy);
-	data.data_xyzx = imageLoad(xyzx_in, ivec2(1,1));
+	data.data_xyzx = imageLoad(xyz_in, ivec2(1,1));
 
 	//workgroupの合算値としてidの場所に値を格納する
 	imageStore(xyz_out,  groupid, s_xyz);
