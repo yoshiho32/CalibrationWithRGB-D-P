@@ -436,6 +436,14 @@ int main()
     simple.setLight(light);
     simple.setMaterial(material);
 
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, tex1);
+
+	// 平面の方程式を渡す
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+
 #if GENERATE_POSITION
     // 頂点位置テクスチャ
     glUniform1i(0, 0);

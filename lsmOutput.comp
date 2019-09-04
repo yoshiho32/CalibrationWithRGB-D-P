@@ -33,7 +33,7 @@ void main(){
 	}
 
 	
-	data.data_xyz  = pixel_xyz;//
+	data.data_xyz  = pixel_xyz;
 	data.data_xy2  = pixel_xy2;
 	data.data_xyzx = pixel_xyzx;
 

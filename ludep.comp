@@ -20,9 +20,9 @@ void main(){
 
 	// 求めた和を行列の要素として二次元配列を生成
 	mat3 matA = {
-	{1,				   data.data_xyz[0],  data.data_xyz[1] },
-	{data.data_xyz[0], data.data_xy2[0],  data.data_xyzx[0]},
-	{data.data_xyz[1], data.data_xyzx[0], data.data_xy2[1]}	
+	{1,				        data.data_xyz[0]/*x*/,    data.data_xyz[1]/*y*/ },
+	{data.data_xyz[0]/*x*/, data.data_xy2[0]/*x^2*/,  data.data_xyzx[0]/*xy*/},
+	{data.data_xyz[1]/*y*/, data.data_xyzx[0]/*xy*/,  data.data_xy2[1]/*y^2*/}	
 	};
 
 	// LU分解が出来ているかのサンプル行列
@@ -55,7 +55,7 @@ void main(){
 	};
 	
 	vec3 b = {
-	  data.data_xyz[2], data.data_xyzx[2], data.data_xyzx[1]
+	  data.data_xyz[2]/*z*/, data.data_xyzx[2]/*zx*/, data.data_xyzx[1]/*yz*/
 	};
 	// LU分解が出来ているかのサンプル行列
 	//vec3 b = vec3(1, -2, 7);
