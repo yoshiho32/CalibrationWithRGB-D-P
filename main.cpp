@@ -25,11 +25,11 @@
 
 // SSBOのデータのチェックを行う際は 1
 #define DATACHECK 1
-#define DATACHECK_CALC 0
+#define DATACHECK_CALC 1
 
 // デプスデータをNEARからFARの間にあるものだけを使う＊現状はシェーダーに渡してないので無意味な数字
-#define FAR  300
-#define NEAR 20
+//#define FAR  300
+//#define NEAR 20
 
 // lsmを用いる際は 1
 #define LSM_OPTION 1
@@ -105,6 +105,7 @@ int main()
     MessageBox(NULL, TEXT("GLFW のウィンドウが開けませんでした。"), TEXT("すまんのう"), MB_OK);
     return EXIT_FAILURE;
   }
+
 
   // 深度センサを有効にする
   KinectV2 sensor;
@@ -419,7 +420,7 @@ int main()
 	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
 
 	// 計算結果をコマンドラインに出力する
-	std::cout << "x = " << output[0] << ", y = " << output[1] << ", z = " << output[2] << std::endl;
+	std::cout << "x = " << output[0] << ", y = " << output[1] << ", z = " << output[2] << ", w = " << output[3] << std::endl;
 
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -466,5 +467,6 @@ int main()
 
     // バッファを入れ替える
     window.swapBuffers();
+
   }
 }

@@ -2,12 +2,18 @@
 
 #define MILLIMETER 0.001
 #define DEPTH_SCALE (-65535.0 * MILLIMETER)
-
+#define DEPTH_MAXIMUM (-10.0)
 #define KARNEL_WIDTH   0.00195
 #define KARNEL_HEIGHT  0.00236
 
-#define FAR  300
+#define FAR  200
 #define NEAR 20
+
+// スケール
+const vec2 scale = vec2(
+  1.546592,
+  1.222434
+);
 
 // コンピュートシェーダー上のカーネルサイズ
 layout(local_size_x = 1, local_size_y = 1) in;
@@ -30,17 +36,24 @@ layout (std430, binding = 7) buffer Input{
   DataSet data;
 };
 
+// デプス値をスケーリングする
+float s(in float z)
+{
+  return z == 0.0 ? DEPTH_MAXIMUM : z * DEPTH_SCALE;
+}
+
 void main(){
 	// 現在のデプス
 	ivec2 itexcoord = ivec2(gl_GlobalInvocationID.xy);
+	//(texcoord - 0.5) * scale
 	vec2 depthcoord = vec2(itexcoord.x * KARNEL_WIDTH, itexcoord.y * KARNEL_HEIGHT); 
-	vec4 p = vec4(itexcoord, texture(depth, depthcoord).x * DEPTH_SCALE, 1.0);
+	float z = s(texture(depth, depthcoord).x);
+	vec4 p = vec4(itexcoord, z * DEPTH_SCALE, 1.0);
 
 
 	// FARより遠いをマイナスで表現、NEARより近いを普通にステップする NEAR < p.z < FARで有効化
 	p = p * step(-FAR, -p.z) * step(NEAR, p.z);
 
-	//s_xyz  = p;
 	vec4 s_xy2  = vec4(p.x*p.x, p.y*p.y, p.z*p.z, p.w);
 	vec4 s_xyzx = vec4(p.x*p.y, p.y*p.z, p.x*p.z, p.w);
 	
