@@ -16,6 +16,7 @@ layout (std430, binding = 7) buffer Input{
 
 void main(){
 	
+	// 行列数
 	int N = 3;
 
 	// 求めた和を行列の要素として二次元配列を生成
@@ -121,7 +122,13 @@ void main(){
 	  xx[i] = yy[i] - sum;
 	}
 
+	//float ave_x = data.data_xyz[3] < 0.01 ? 0 : data.data_xyz[0] / data.data_xyz[3];
+	//float ave_y = data.data_xyz[3] < 0.01 ? 0 : data.data_xyz[1] / data.data_xyz[3];
+	//float ave_z = data.data_xyz[3] < 0.01 ? 0 : data.data_xyz[2] / data.data_xyz[3];
+
 	// サンプル行列を使用している際はx = -1, y = 2, z = 1になるはず
-	data.data_xyz = vec4(xx[0], xx[1], xx[2], xx[0]*xx[0]+xx[1]*xx[1]+xx[2]*xx[2] - 1);
-	
+	data.data_xyz = vec4(xx[0], xx[1], xx[2], 1);
+	//data.data_xy2 = vec4(ave_x, ave_y, ave_z, 1);
+	data.data_xy2 = vec4(0, 0, 0, 1);
+	data.data_xyzx = vec4(0,0,0,0);
 }

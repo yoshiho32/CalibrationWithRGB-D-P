@@ -79,6 +79,10 @@ void makeTex(GLuint p, int width, int height, int CLAMP_MODE = 1) {
 //
 int main()
 {
+
+
+	float maxdepth = 0.0;
+	float mindepth = 11100.0;
   // GLFW を初期化する
   if (glfwInit() == GL_FALSE)
   {
@@ -128,6 +132,7 @@ int main()
 
   // デプスデータから頂点位置を計算するシェーダ
   const Calculate position(width, height, "position.frag");
+  const Calculate position2(width, height, "position2.frag");
 
   // 頂点位置から法線ベクトルを計算するシェーダ
   const Calculate normal(width, height, "normal.frag");
@@ -197,6 +202,10 @@ int main()
   glGenTextures(1, &tex9);
   makeTex(tex9, 2, 2);
 
+  GLuint texD;
+  glGenTextures(1, &texD);
+  makeTex(texD, width, height);
+
 #endif
 
   // 背景色を設定する
@@ -210,13 +219,243 @@ int main()
   while (!window.shouldClose())
   {
 
+	  // LSMの計算を行う
+#if LSM_OPTION 
+	  // computeshaderを使用する
+	  comp.use();
+
+	  // デプスの歪みを補正してカメラ座標系に変換しているテクスチャを送る
+	  glUniform1i(0, 0);
+	  glActiveTexture(GL_TEXTURE0);
+	  sensor.getRawPoint();
+
+	  glActiveTexture(GL_TEXTURE1);
+	  glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE2);
+	  glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE3);
+	  glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE4);
+	  glBindImageTexture(4, texD, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	
+
+#if DATACHECK_CALC
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	  comp.calculate(width, height);
+
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+	  // SSBO から値を取り出す
+	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	  if (output[6] > maxdepth) {
+		  maxdepth = output[6];
+	  }
+	  if (output[6] < mindepth && output[6] != 0) {
+		  mindepth = output[6];
+	  }
+
+
+
+	  std::cout << "calc : ";
+	  for (int i = 0; i < 12; i++) {
+		  std::cout << output[i] << " - ";
+	  }
+	  std::cout << sizeof(DataSet) << std::endl;
+
+	  std::cout << "max = " << maxdepth << ", min = " << mindepth << std::endl;
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+#else
+	  comp.calculate(width, height);
+#endif
+
+	  // lsm-computeshaderを使用する
+	  // 512-512 を 32-32 にする
+	  lsm.use();
+	  glActiveTexture(GL_TEXTURE1);
+	  glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE2);
+	  glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE3);
+	  glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE4);
+	  glBindImageTexture(4, tex4, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE5);
+	  glBindImageTexture(5, tex5, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE6);
+	  glBindImageTexture(6, tex6, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+#if DATACHECK
+	  // 計算結果の出力先
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	  lsm.calculate(32, 32);
+
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+	  //処理の実行:結果がfloatでSSBOに入る
+	  // データの格納先
+	  //std::vector<GLfloat> output(count * sizeof(DataSet));
+	  // SSBO から値を取り出す
+	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	  std::cout << "first lsm : ";
+	  for (int i = 0; i < 12; i++) {
+		  std::cout << output[i] << " ";
+	  }
+	  std::cout << std::endl;
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+#else
+	  lsm.calculate(32, 32);
+#endif
+
+	  // 二回目の計算 32-32 を 2-2 にする
+	  lsm.use();
+
+	  glActiveTexture(GL_TEXTURE1);
+	  glBindImageTexture(1, tex4, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE2);
+	  glBindImageTexture(2, tex5, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE3);
+	  glBindImageTexture(3, tex6, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE4);
+	  glBindImageTexture(4, tex7, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE5);
+	  glBindImageTexture(5, tex8, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE6);
+	  glBindImageTexture(6, tex9, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+#if DATACHECK
+	  // 計算結果の出力先
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	  lsm.calculate(2, 2);
+
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+	  //処理の実行:結果がfloatでSSBOに入る
+	  // データの格納先
+	  //std::vector<GLfloat> output(count * sizeof(DataSet));
+	  // SSBO から値を取り出す
+	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	  std::cout << "second lsm : ";
+	  for (int i = 0; i < 12; i++) {
+		  std::cout << output[i] << " ";
+	  }
+	  std::cout << std::endl;
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+#else
+	  lsm.calculate(2, 2);
+#endif
+	  lsmOutput.use();
+	  glActiveTexture(GL_TEXTURE4);
+	  glBindImageTexture(1, tex7, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE5);
+	  glBindImageTexture(2, tex8, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  glActiveTexture(GL_TEXTURE6);
+	  glBindImageTexture(3, tex9, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	  // 計算結果の出力先
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	  lsmOutput.calculate(1, 1);
+
+#if DATACHECK
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+	  // SSBO から値を取り出す
+	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
+	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	  // 計算結果をコマンドラインに出力する
+	  std::cout << "lsm : ";
+	  for (int i = 0; i < 12; i++) {
+		  std::cout << output[i] << " ";
+	  }
+	  std::cout << std::endl;
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+#endif
+
+	  // LU分解を行っている部分
+#if LU_DEP 
+
+	  ludep.use();
+	  // 計算結果の出力先
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	  ludep.calculate(1, 1);
+
+	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+
+	  // SSBO から値を取り出す
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	  // 計算結果をコマンドラインに出力する
+	  std::cout << "x = " << output[0] << ", y = " << output[1] << ", z = " << output[2] << ", w = " << output[3] << std::endl;
+
+	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+#endif
+
+#endif
+
 #if GENERATE_POSITION
     // 頂点位置の計算
-    position.use();
-    glUniform1i(0, 0);
-    glActiveTexture(GL_TEXTURE0);
-    sensor.getDepth();
-    const std::vector<GLuint> &positionTexture(position.calculate());
+    position2.use();
+	glActiveTexture(GL_TEXTURE0);
+	glBindImageTexture(0, texD, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
+	// 計算結果の出力先
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
+
+	const std::vector<GLuint> &positionTexture(position2.calculate());
+
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
+
+	// SSBO から値を取り出す
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
+
+	// 計算結果をコマンドラインに出力する
+	std::cout << "position : x = " << output[0] << ", y = " << output[1] << ", z = " << output[2] << ", w = " << output[3] << std::endl;
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
 #endif
 
     // 法線ベクトルの計算
@@ -230,204 +469,6 @@ int main()
 #endif
     const std::vector<GLuint> &normalTexture(normal.calculate());
 
-	// LSMの計算を行う
-#if LSM_OPTION 
-	// computeshaderを使用する
-	comp.use();
-
-	glUniform1i(0, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, positionTexture[0]);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE3);
-	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-#if DATACHECK_CALC
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
-
-	comp.calculate(width, height);
-
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
-	// SSBO から値を取り出す
-	//   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
-	//   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
-
-	std::cout << "calc : ";
-	for (int i = 0; i < 12; i++) {
-		std::cout << output[i] << " - ";
-	}
-	std::cout << sizeof(DataSet) << std::endl;
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-#else
-	comp.calculate(width, height);
-#endif
-	
-	// lsm-computeshaderを使用する
-	// 512-512 を 32-32 にする
-	lsm.use();
-	glActiveTexture(GL_TEXTURE1);
-	glBindImageTexture(1, tex1, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindImageTexture(2, tex2, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE3);
-	glBindImageTexture(3, tex3, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE4);
-	glBindImageTexture(4, tex4, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE5);
-	glBindImageTexture(5, tex5, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE6);
-	glBindImageTexture(6, tex6, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-#if DATACHECK
-	// 計算結果の出力先
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
-
-	lsm.calculate(32, 32);
-
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
-	//処理の実行:結果がfloatでSSBOに入る
-	// データの格納先
-	//std::vector<GLfloat> output(count * sizeof(DataSet));
-	// SSBO から値を取り出す
-	//   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
-	//   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
-
-	std::cout << "first lsm : ";
-	for (int i = 0; i < 12; i++) {
-		std::cout << output[i] << " ";
-	}
-	std::cout << std::endl;
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-#else
-	lsm.calculate(32, 32);
-#endif
-	
-	// 二回目の計算 32-32 を 2-2 にする
-	lsm.use();
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindImageTexture(1, tex4, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindImageTexture(2, tex5, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE3);
-	glBindImageTexture(3, tex6, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE4);
-	glBindImageTexture(4, tex7, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE5);
-	glBindImageTexture(5, tex8, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE6);
-	glBindImageTexture(6, tex9, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-#if DATACHECK
-	// 計算結果の出力先
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
-
-	lsm.calculate(2, 2);
-
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
-	//処理の実行:結果がfloatでSSBOに入る
-	// データの格納先
-	//std::vector<GLfloat> output(count * sizeof(DataSet));
-	// SSBO から値を取り出す
-	//   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
-	//   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
-
-	std::cout << "second lsm : ";
-	for (int i = 0; i < 12; i++) {
-		std::cout << output[i] << " ";
-	}
-	std::cout << std::endl;
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-#else
-	lsm.calculate(2, 2);
-#endif
-	lsmOutput.use();
-	glActiveTexture(GL_TEXTURE4);
-	glBindImageTexture(1, tex7, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE5);
-	glBindImageTexture(2, tex8, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	glActiveTexture(GL_TEXTURE6);
-	glBindImageTexture(3, tex9, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-	// 計算結果の出力先
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
-
-	lsmOutput.calculate(1, 1);
-
-#if DATACHECK
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
-	// SSBO から値を取り出す
-	//   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
-	//   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
-
-	// 計算結果をコマンドラインに出力する
-	std::cout << "lsm : ";
-	for (int i = 0; i < 12; i++) {
-		std::cout << output[i] << " ";
-	}
-	std::cout << std::endl;
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-#endif
-
-	// LU分解を行っている部分
-#if LU_DEP 
-	
-	ludep.use();
-	// 計算結果の出力先
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, ssbo);
-
-	ludep.calculate(1, 1);
-
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
-
-	// SSBO から値を取り出す
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
-
-	// 計算結果をコマンドラインに出力する
-	std::cout << "x = " << output[0] << ", y = " << output[1] << ", z = " << output[2] << ", w = " << output[3] << std::endl;
-
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-#endif
-
-#endif
-
 	// 画面消去
     window.clear();
 
@@ -436,9 +477,6 @@ int main()
     simple.loadMatrix(window.getMp(), window.getMw());
     simple.setLight(light);
     simple.setMaterial(material);
-
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, tex1);
 
 	// 平面の方程式を渡す
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
@@ -467,6 +505,5 @@ int main()
 
     // バッファを入れ替える
     window.swapBuffers();
-
   }
 }

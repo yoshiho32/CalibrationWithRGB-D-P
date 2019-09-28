@@ -51,6 +51,9 @@ public:
   // カメラ座標を取得する
   GLuint getPoint() const;
 
+  // 変換してないカメラ座標を取得する
+  GLuint getRawPoint() const;
+
   // カラーデータを取得する
   GLuint getColor() const;
 };

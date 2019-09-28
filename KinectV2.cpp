@@ -185,6 +185,65 @@ GLuint KinectV2::getPoint() const
   return pointTexture;
 }
 
+// カメラ座標を取得する
+GLuint KinectV2::getRawPoint() const
+{
+	// カメラ座標のテクスチャを指定する
+	glBindTexture(GL_TEXTURE_2D, pointTexture);
+
+	// 次のデプスのフレームデータが到着していれば
+	IDepthFrame *depthFrame;
+	if (depthReader->AcquireLatestFrame(&depthFrame) == S_OK)
+	{
+		// デプスデータのサイズと格納場所を得る
+		UINT depthSize;
+		UINT16 *depthBuffer;
+		depthFrame->AccessUnderlyingBuffer(&depthSize, &depthBuffer);
+
+		// カラーのテクスチャ座標を求めてバッファオブジェクトに転送する
+		glBindBuffer(GL_ARRAY_BUFFER, coordBuffer);
+		ColorSpacePoint *const texcoord(static_cast<ColorSpacePoint *>(glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY)));
+		coordinateMapper->MapDepthFrameToColorSpace(depthCount, depthBuffer, depthCount, texcoord);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+
+		// カメラ座標への変換テーブルを得る
+		UINT32 entry;
+		PointF *table;
+		coordinateMapper->GetDepthFrameToCameraSpaceTable(&entry, &table);
+
+		// すべての点について
+		for (unsigned int i = 0; i < entry; ++i)
+		{
+
+			// その点のデプス値を得る
+			const unsigned short d(depthBuffer[i]);
+
+			// デプス値の単位をメートルに換算する (計測不能点は 0 にする)
+			const GLfloat z(d == 0 ? 0 : GLfloat(d));
+
+			// その点のスクリーン上の位置を求める
+			const GLfloat x(table[i].X);
+			const GLfloat y(-table[i].Y);
+
+			// その点のカメラ座標を求める
+			position[i][0] = x;
+			position[i][1] = y;
+			position[i][2] = z;
+		}
+
+		// カメラ座標を転送する
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, depthWidth, depthHeight, GL_RGB, GL_FLOAT, position);
+
+		// テーブルを開放する
+		CoTaskMemFree(table);
+
+		// デプスフレームを開放する
+		depthFrame->Release();
+	}
+
+	return pointTexture;
+}
+
 // カラーデータを取得する
 GLuint KinectV2::getColor() const
 {

@@ -15,6 +15,7 @@ void main(void)
 {
   // テクスチャマッピングを行って陰影を求める
   //fc = idiff + ispec;
-  //fc = texture(color, texcoord);
-  fc = texture(color, texcoord);// * idiff + ispec;
+  fc = texture(color, texcoord);
+  //fc = vec4(1 - texcoord.x * 256 / 512, 1 - texcoord.y * 256 / 424, 0, 1) * step(ispec.x, 0.9);//texture(color, texcoord);// * idiff + ispec;
 }
+

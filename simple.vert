@@ -31,6 +31,17 @@ out vec4 idiff;                                     // 拡散反射光強度
 out vec4 ispec;                                     // 鏡面反射光強度
 out vec2 texcoord;                                  // テクスチャ座標
 
+struct DataSet{
+  vec4 data_xyz;
+  vec4 data_xy2;
+  vec4 data_xyzx;
+ };
+
+// 計算結果の出力
+layout (std430, binding = 7) buffer Input{
+  DataSet data;
+};
+
 void main(void)
 {
   // 頂点位置
