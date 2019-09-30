@@ -55,7 +55,8 @@ void main(void)
   //float zy = -( data.data_xyz[0] * tex.x + data.data_xyz[1] * tex.y ) / data.data_xyz[2];
 
   // デプス値からカメラ座標値を求める 
-  position = pos.z==0 ? vec3(0,0,0) : vec3(-tex*scale, zy);
+  position = vec3(-tex*scale, zy);
+  //position = pos.z==0 ? vec3(0,0,0) : vec3(-tex*scale, zy);
 
 }
 

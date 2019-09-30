@@ -500,6 +500,10 @@ int main()
     glActiveTexture(GL_TEXTURE2);
     sensor.getColor();
 
+
+	glUniform1i(3, 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindImageTexture(3, texD, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
     // ê}å`ï`âÊ
     mesh.draw();
 

@@ -21,6 +21,8 @@ uniform mat4 mg;                                    // 法線ベクトルの変換行列
 layout (location = 0) uniform sampler2D position;   // 頂点位置のテクスチャ
 layout (location = 1) uniform sampler2D normal;     // 法線ベクトルのテクスチャ
 layout (location = 2) uniform sampler2D color;      // カラーのテクスチャ
+layout (rgba32f, binding = 3) uniform readonly image2D depth; // オブジェクトの座標
+
 
 // 頂点属性
 layout (location = 0) in vec2 pc;                   // 頂点のテクスチャ座標
