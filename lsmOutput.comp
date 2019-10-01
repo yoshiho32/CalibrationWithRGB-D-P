@@ -7,23 +7,23 @@ layout (rgba32f, binding = 1) uniform readonly  image2D xyz_in;
 layout (rgba32f, binding = 2) uniform readonly  image2D xy2_in;
 layout (rgba32f, binding = 3) uniform readonly  image2D xyzx_in;
 
+// 計算結果の出力
 struct DataSet{
   vec4 data_xyz;
   vec4 data_xy2;
   vec4 data_xyzx;
  };
-
-// 計算結果の出力
 layout (std430, binding = 7) buffer Input{
   DataSet data;
 };
 
 void main(){
-	
+	// 計算結果入れる用
 	vec4 pixel_xyz  = vec4(0.0, 0.0, 0.0, 0.0);
 	vec4 pixel_xy2  = vec4(0.0, 0.0, 0.0, 0.0);
 	vec4 pixel_xyzx = vec4(0.0, 0.0, 0.0, 0.0);
 
+	// それぞれ足し合わせる
 	for(int i = 0; i < 2; i++){
 	  for(int j = 0; j < 2; j++){
 	    pixel_xyz += imageLoad(xyz_in, ivec2(i, j));
@@ -32,7 +32,7 @@ void main(){
 	  }
 	}
 
-	
+	// 出力する
 	data.data_xyz  = pixel_xyz;
 	data.data_xy2  = pixel_xy2;
 	data.data_xyzx = pixel_xyzx;

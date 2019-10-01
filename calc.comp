@@ -2,14 +2,17 @@
 
 #define MILLIMETER 0.001
 #define DEPTH_SCALE (-MILLIMETER)
-#define DEPTH_MAXIMUM (0.0)
+#define DEPTH_MAXIMUM (0.0)      
+
+// それぞれ1/512と1/424の値
 #define KARNEL_WIDTH   0.00195
 #define KARNEL_HEIGHT  0.00236
 
 #define FAR  1000
 #define NEAR 500
 
-#define E_RENGE 100
+// 有効化する距離
+#define E_RENGE 200
 
 // スケール
 const vec2 scale = vec2(
@@ -20,7 +23,7 @@ const vec2 scale = vec2(
 // コンピュートシェーダー上のカーネルサイズ
 layout(local_size_x = 1, local_size_y = 1) in;
 
-// 現在のデプスデータ
+// 現在のデプスデータ,zに0~8000の値が入る
 layout (location = 0) uniform sampler2D depth;
 
 layout (rgba32f, binding = 1) uniform writeonly image2D xyz_out;
@@ -29,13 +32,12 @@ layout (rgba32f, binding = 3) uniform writeonly image2D xyzx_out;
 
 layout (rgba32f, binding = 4) uniform writeonly image2D depth_out;
 
+// データチェック用
 struct DataSet{
   vec4 data_xyz;
   vec4 data_xy2;
   vec4 data_xyzx;
  };
-
-// 計算結果の出力
 layout (std430, binding = 7) buffer Input{
   DataSet data;
 };
@@ -46,14 +48,15 @@ float s(in float z)
   return z == 0.0 ? DEPTH_MAXIMUM : z * DEPTH_SCALE;
 }
 
-void main(){
-
+void main()
+{
+    // 一度初期化する
 	data.data_xyz  = vec4(0,0,0,0);
 	data.data_xy2  = vec4(0,0,0,0);
 	data.data_xyzx = vec4(0,0,0,0);
 
+	// 画像平面の中心を基準点としてサンプリングする
 	vec4 SamplePoint = texture(depth, vec2(0.5,0.5));
-
 
 	// 現在座標・image2D基準
 	ivec2 itexcoord = ivec2(gl_GlobalInvocationID.xy);
@@ -63,18 +66,24 @@ void main(){
 
 	// 現在座標がカメラ座標でどの位置かの対応
 	vec4 z = vec4(texture(depth, depthcoord).xyz, 1.0);
-	// FARより遠いをマイナスで表現、NEARより近いを普通にステップする NEAR < p.z < FARで有効化
-	//vec4 p = z * step(-FAR, -z.z) * step(NEAR, z.z);
-	vec4 p = z;
-	p.xy = p.xy - 0.5;
-	p = p * step(-(SamplePoint.z + E_RENGE), -z.z) * step((SamplePoint.z - E_RENGE), z.z);
 
-	// 0~8000のデプスデータを0, 1~2にする
+
+	vec4 p = z;
+	// 計算の際の中心点を(0,0)に
+	p.xy = p.xy - 0.5;
+	// 中心点を元に計算する値を設定、±E_RENGEの値内の物を使う
+	p = p * step(-(SamplePoint.z + E_RENGE), -z.z) * step((SamplePoint.z - E_RENGE), z.z);
+	
+	// FARより遠いをマイナスで表現、NEARより近いを普通にステップする NEAR < p.z < FARで有効化
+	// p = p * step(-FAR, -z.z) * step(NEAR, z.z);  /
+
+	// 0~8000のデプスデータを0か p.z±E_RENGEに
 	p.z =  s(p.z);
 
 	vec4 s_xy2  = vec4(p.x*p.x, p.y*p.y, p.z*p.z, p.w);
 	vec4 s_xyzx = vec4(p.x*p.y, p.y*p.z, p.x*p.z, p.w);
-
+	
+	// データチェック用
 	data.data_xyz = z;
 	data.data_xy2 = p;
 	data.data_xyzx = s_xyzx;

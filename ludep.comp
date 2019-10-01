@@ -3,13 +3,12 @@
 // コンピュートシェーダー上のカーネルサイズ
 layout(local_size_x = 1, local_size_y = 1) in;
 
+// 計算結果の出力
 struct DataSet{
   vec4 data_xyz;
   vec4 data_xy2;
   vec4 data_xyzx;
  };
-
-// 計算結果の出力
 layout (std430, binding = 7) buffer Input{
   DataSet data;
 };
@@ -104,7 +103,7 @@ void main(){
 	}
 
 	// 求めたLU行列を使って連立方程式を解く
-	float yy[3];// ???????????????????
+	float yy[3];
 	for (int i = 0; i < N; i++){
 	  float sum = 0;
 	  for (int k = 0; k <= i - 1; k++){
@@ -113,7 +112,7 @@ void main(){
 	  yy[i] = (b[i] - sum) / matL[i][i];
 	}
 
-	float xx[3];// ??????
+	float xx[3];
 	for (int i = N - 1; i >= 0; i--){
 	  float sum = 0;
 	  for (int k = i + 1; k <= N - 1; k++){
@@ -127,8 +126,9 @@ void main(){
 	//float ave_z = data.data_xyz[3] < 0.01 ? 0 : data.data_xyz[2] / data.data_xyz[3];
 
 	// サンプル行列を使用している際はx = -1, y = 2, z = 1になるはず
-	data.data_xyz = vec4(xx[0], xx[1], xx[2], 1);
-	//data.data_xy2 = vec4(ave_x, ave_y, ave_z, 1);
-	data.data_xy2 = vec4(0, 0, 0, 1);
-	data.data_xyzx = vec4(0,0,0,0);
+	// 計算結果のa,b,cを出力
+	data.data_xyz   = vec4(xx[0], xx[1], xx[2], 1);
+	//data.data_xy2   = vec4(ave_x, ave_y, ave_z, 1);
+	data.data_xy2   = vec4(0, 0, 0, 1);
+	data.data_xyzx  = vec4(0, 0 ,0, 0);
 }

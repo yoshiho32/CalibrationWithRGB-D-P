@@ -250,8 +250,6 @@ int main()
 
 	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
 	  // SSBO から値を取り出す
-	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
-	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
 	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
 
@@ -262,14 +260,12 @@ int main()
 		  mindepth = output[6];
 	  }
 
-
-
 	  std::cout << "calc : ";
 	  for (int i = 0; i < 12; i++) {
 		  std::cout << output[i] << " - ";
 	  }
 	  std::cout << sizeof(DataSet) << std::endl;
-
+	  // 取得したデータでの有効な一番大きなデプス値と小さなものを出力
 	  std::cout << "max = " << maxdepth << ", min = " << mindepth << std::endl;
 
 	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
@@ -393,18 +389,14 @@ int main()
 #if DATACHECK
 	  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, 0);
 	  // SSBO から値を取り出す
-	  //   ・glMapbuffer() で取り出したポインタは glUnmapBuffer() すると無効になる・
-	  //   ・glUnmapBuffer() する前に処理を終えるかデータをコピーしておく．
 	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 	  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count * sizeof(DataSet), output.data());
-
 	  // 計算結果をコマンドラインに出力する
 	  std::cout << "lsm : ";
 	  for (int i = 0; i < 12; i++) {
 		  std::cout << output[i] << " ";
 	  }
 	  std::cout << std::endl;
-
 	  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 #endif
 
@@ -500,10 +492,11 @@ int main()
     glActiveTexture(GL_TEXTURE2);
     sensor.getColor();
 
-
+	// デプスデータが有効かどうか
 	glUniform1i(3, 3);
 	glActiveTexture(GL_TEXTURE3);
 	glBindImageTexture(3, texD, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F);
+
     // 図形描画
     mesh.draw();
 

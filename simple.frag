@@ -15,14 +15,15 @@ layout (location = 0) out vec4 fc;                  // フラグメントの色
 
 void main(void)
 {
-  // デプスが有効がどうかでテクスチャの色を変える
+  // オブジェクトデータの取得
   ivec2 tex = ivec2(texcoord.x * 512, texcoord.y * 424);
-
   vec4 p = imageLoad(depth, tex);
 
   // テクスチャマッピングを行って陰影を求める
   //fc = idiff + ispec;
+  // デプスが有効がどうかでテクスチャの色を変える
   fc = texture(color , texcoord)*p.w;
-  //fc = vec4(1 - texcoord.x * 256 / 512, 1 - texcoord.y * 256 / 424, 0, 1) * step(ispec.x, 0.9);//texture(color, texcoord);// * idiff + ispec;
+  //fc = vec4(1 - texcoord.x * 256 / 512, 1 - texcoord.y * 256 / 424, 0, 1) * step(ispec.x, 0.9); // 位置に応じて色を変える
+  //fc = texture(color, texcoord) * idiff + ispec;
 }
 

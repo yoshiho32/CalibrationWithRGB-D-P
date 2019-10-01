@@ -40,6 +40,7 @@ void main(void)
 {
   // カラーのテクスチャ座標(0,0)-(1,1)をimage2Dのテクスチャ座標(0,0)-(512,424)に置き換える(globalInvocationIDがないので)
   ivec2 itexcoord = ivec2(texcoord * ivec2(512, 424));
+
   // デプスデータの取得
   vec4 pos = imageLoad(depth, itexcoord);
 
@@ -50,11 +51,11 @@ void main(void)
   // z = a + bx + cy 
   float zy =  data.data_xyz[0] + tex.x * data.data_xyz[1] + tex.y * data.data_xyz[2];////(data.data_xyz[0] * tex.x + data.data_xyz[1] * tex.y + data.data_xyz[3]);
   
-  // O(0,0,0)を通るならこれでいい、普通の式。今回はOを通るかわからないのでダメ
+  // O(0,0,0)を通るならこっち、普通の式。今回はOを通るかわからないのでダメ
   // z = -(a'x + b'y) / c'
   //float zy = -( data.data_xyz[0] * tex.x + data.data_xyz[1] * tex.y ) / data.data_xyz[2];
 
-  // デプス値からカメラ座標値を求める 
+  // デプス値から座標値を求める 
   position = vec3(-tex*scale, zy);
   //position = pos.z==0 ? vec3(0,0,0) : vec3(-tex*scale, zy);
 
